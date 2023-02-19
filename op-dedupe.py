@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import subprocess
 import tkinter as tk
 
@@ -64,12 +66,15 @@ class OnePasswordTool:
                 continue
             for j in range(1, len(duplicate)):
                 if archive_var.get():
-                    subprocess.run(['op', 'archive', 'item', duplicate[j]])
+                    print(['op', 'archive', 'item', duplicate[j]])
+                    #subprocess.run(['op', 'archive', 'item', duplicate[j]])
                 if merge_var.get():
-                    subprocess.run(['op', 'edit', 'item', duplicate[0], 'set', 'details', self.get_item_details(duplicate[j])])
-                    subprocess.run(['op', 'delete', 'item', duplicate[j]])
+                    print(['op', 'edit', 'item', duplicate[0], 'set', 'details', self.get_item_details(duplicate[j])])
+                    print(['op', 'delete', 'item', duplicate[j]])
+                    #subprocess.run(['op', 'edit', 'item', duplicate[0], 'set', 'details', self.get_item_details(duplicate[j])])
+                    #subprocess.run(['op', 'delete', 'item', duplicate[j]])
 
 
-# Example usage
-tool = OnePasswordTool()
-tool.show_duplicate_manager()
+if __name__ == "__main__":
+    tool = OnePasswordTool()
+    tool.show_duplicate_manager()
