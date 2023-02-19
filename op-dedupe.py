@@ -54,7 +54,7 @@ class OpTool:
         duplicates = []
         for i, item in enumerate(self.items):
             details = self.get_item_details(item)
-            matching_items = [j for j in self.items[i+1:] if self.get_item_details(j) == details]
+            matching_items = [j for j in self.items[i+1:] if self.get_item_details(j) == details and j != item]
             if matching_items:
                 duplicates.append([item] + matching_items)
         return duplicates
