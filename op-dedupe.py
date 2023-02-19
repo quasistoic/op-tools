@@ -10,7 +10,7 @@ class OnePasswordTool:
         self.items = self.get_items()
 
     def get_items(self):
-        result = subprocess.run(['op', 'list', 'items'], capture_output=True)
+        result = subprocess.run(['op', 'item', 'list'], capture_output=True)
         items = result.stdout.decode('utf-8').strip().split('\n')
         return items
 
