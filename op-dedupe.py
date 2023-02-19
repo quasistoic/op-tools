@@ -67,13 +67,30 @@ class OpTool:
 
         logging.info("Found the following duplicates: {}", duplicates)
 
-        root = tk.Tk()
-        root.title('1Password Duplicate Manager')
-        label = tk.Label(root, text='Select the canonical item for each set of duplicates:')
-        label.pack()
-        for i, duplicate in enumerate(duplicates):
+        def apply_changes():
+            for i, duplicate in enumerate(duplicates):
+                canonical_var = root.winfo_children()[i*2].winfo_children()[0].var
+                archive_var = root.winfo_children()[i*2].winfo_children()[1].var
+                merge_var = root.winfo_children()[i*2].winfo_children()[2].var
+                if canonical_var.get():
+                    continue
+                for j in range(1, len(duplicate)):
+                    if archive_var.get():
+                        logging.warning(['op', 'archive', 'item', duplicate[j]], file=sys.stderr)
+                    if merge_var.get():
+                        logging.warning(['op', 'edit', 'item', duplicate[0], 'set', 'details', self.get_item_details(duplicate[j])], file=sys.stderr)
+                        logging.warning(['op', 'delete', 'item', duplicate[j]], file=sys.stderr)
+
+        def display_duplicate_set(i, root):
+            nonlocal duplicates
+            root.destroy()
+            root = tk.Tk()
+            root.title('1Password Duplicate Manager')
+            label = tk.Label(root, text='Select the canonical item for this set of duplicates:')
+            label.pack()
+            duplicate = duplicates[i]
             canonical_var = tk.BooleanVar()
-            canonical_var.set(i == 0)
+            canonical_var.set(True)
             archive_var = tk.BooleanVar()
             merge_var = tk.BooleanVar()
             frame = tk.Frame(root)
@@ -86,22 +103,18 @@ class OpTool:
             merge_checkbutton.pack(side='left')
             label = tk.Label(root, text=duplicate[0], justify='left')
             label.pack()
-        button = tk.Button(root, text='Apply Changes', command=root.quit)
-        button.pack()
-        root.mainloop()
-        # Apply the changes
+            button = tk.Button(root, text='Apply Changes', command=apply_changes)
+            button.pack()
+            root.mainloop()
+
+        root = tk.Tk()
+        root.title('1Password Duplicate Manager')
+        label = tk.Label(root, text='Select a set of duplicates to manage:')
+        label.pack()
         for i, duplicate in enumerate(duplicates):
-            canonical_var = root.winfo_children()[i*2].winfo_children()[0].var
-            archive_var = root.winfo_children()[i*2].winfo_children()[1].var
-            merge_var = root.winfo_children()[i*2].winfo_children()[2].var
-            if canonical_var.get():
-                continue
-            for j in range(1, len(duplicate)):
-                if archive_var.get():
-                    logging.warn(['op', 'archive', 'item', duplicate[j]])
-                if merge_var.get():
-                    logging.warn(['op', 'edit', 'item', duplicate[0], 'set', 'details', self.get_item_details(duplicate[j])])
-                    logging.warn(['op', 'delete', 'item', duplicate[j]])
+            button = tk.Button(root, text=duplicate[0], command=lambda i=i: display_duplicate_set(i, root))
+            button.pack()
+        root.mainloop()
 
 
 def main():
