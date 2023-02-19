@@ -20,22 +20,25 @@ class OnePasswordTool:
         return details
 
     def find_duplicates(self):
-        duplicates = []
+        duplicates = {}
         for i, item in enumerate(self.items):
             details = self.get_item_details(item)
             if details in duplicates:
-                continue
-            matching_items = [i for i in self.items[i+1:] if self.get_item_details(i) == details]
-            if matching_items:
-                duplicates.append(details)
-                duplicates.append([item] + matching_items)
-        return duplicates
+                duplicates[details].append(item)
+            else:
+                matching_items = [i for i in self.items[i+1:] if self.get_item_details(i) == details]
+                if matching_items:
+                    duplicates[details] = [item] + matching_items
+        return duplicates.values()
 
     def show_duplicate_manager(self):
         duplicates = self.find_duplicates()
         if not duplicates:
             messagebox.showinfo('No Duplicates Found', 'No duplicate items were found.')
             return
+
+        print("Found the following duplicates: {}", duplicates)
+
         root = tk.Tk()
         root.title('1Password Duplicate Manager')
         label = tk.Label(root, text='Select the canonical item for each set of duplicates:')
