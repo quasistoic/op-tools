@@ -88,22 +88,29 @@ class OpTool:
             root.title('1Password Duplicate Manager')
             label = tk.Label(root, text='Select the canonical item for this set of duplicates:')
             label.pack()
+
             duplicate = duplicates[i]
-            canonical_var = tk.BooleanVar()
-            canonical_var.set(True)
-            archive_var = tk.BooleanVar()
-            merge_var = tk.BooleanVar()
-            frame = tk.Frame(root)
-            frame.pack()
-            canonical_checkbutton = tk.Checkbutton(frame, text='Canonical', variable=canonical_var)
-            archive_checkbutton = tk.Checkbutton(frame, text='Archive Non-Canonical', variable=archive_var)
-            merge_checkbutton = tk.Checkbutton(frame, text='Merge Fields', variable=merge_var)
-            canonical_checkbutton.pack(side='left')
-            archive_checkbutton.pack(side='left')
-            merge_checkbutton.pack(side='left')
-            label = tk.Label(root, text=duplicate[0], justify='left')
-            label.pack()
-            button = tk.Button(root, text='Apply Changes', command=apply_changes)
+            items = [self.get_item_details(item) for item in duplicate]
+
+            listbox = tk.Listbox(root, height=len(duplicate), selectmode='single')
+            listbox.pack(fill='both', expand=True)
+            for j, item_details in enumerate(items):
+                listbox.insert(j, item_details)
+
+            def on_select(event):
+                selection = listbox.curselection()
+                if selection:
+                    index = selection[0]
+                    canonical_item = duplicate[index]
+                    for j, item in enumerate(duplicate):
+                        if j != index:
+                            logging.info(f"Editing item {item}")
+                            logging.warning(['op', 'edit', 'item', item, 'set', 'details', self.get_item_details(canonical_item)])
+                            logging.warning(['op', 'delete', 'item', item])
+
+            listbox.bind('<<ListboxSelect>>', on_select)
+
+            button = tk.Button(root, text='Apply Changes', command=root.destroy)
             button.pack()
             root.mainloop()
 
