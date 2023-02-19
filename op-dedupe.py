@@ -105,6 +105,8 @@ class OpTool:
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(levelname)s:%(message)s', stream=sys.stderr)
+
     if len(sys.argv) != 2:
         print("Usage: python op-dedupe.py VAULT_NAME")
         return
