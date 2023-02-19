@@ -1,35 +1,63 @@
 #!/usr/bin/env python3
 
+import logging
+import os
+import pickle
 import subprocess
+import sys
+
 import tkinter as tk
 from tkinter import messagebox
 
 
-class OnePasswordTool:
-    def __init__(self):
+class OpTool:
+    def __init__(self, vault):
+        self.vault = vault
         self.items = self.get_items()
 
-    def get_items(self):
-        result = subprocess.run(['op', 'item', 'list'], capture_output=True)
-        items = result.stdout.decode('utf-8').strip().split('\n')
-        return items
+    def run_command(self, command):
+        cache_file = f"./.op-cache/.{self.vault}.{command}.cache"
+        if os.path.exists(cache_file):
+            logging.info(f"pulling from cache: {cache_file}")
+            with open(cache_file, "rb") as f:
+                return pickle.load(f)
 
-    def get_item_details(self, uuid):
-        result = subprocess.run(['op', 'get', 'item', uuid], capture_output=True)
-        details = result.stdout.decode('utf-8')
-        return details
+        op_command = f"op {command}"
+        if self.vault:
+            op_command += f" --vault {self.vault}"
+        logging.info(f"Calling API: {op_command}")
+        output = os.popen(op_command).read()
+        with open(cache_file, "wb") as f:
+            pickle.dump(output, f)
+        return output
+
+    def get_items(self):
+        output = self.run_command("item list")
+        return [line.split()[0] for line in output.split("\n")[3:-1]]
+
+    def get_item_details(self, item):
+        output = self.run_command(f"item get {item}")
+        details = {}
+        for line in output.split("\n"):
+            if line.startswith("      "):
+                items = line.strip().split(": ")
+                if len(items) >= 2:
+                    key, value = items[0], items[1]
+                    details[key] = value
+        return str(details)
+
+    def delete_item(self, item):
+        self.run_command(f"delete item {item}")
+        self.items.remove(item)
 
     def find_duplicates(self):
-        duplicates = {}
+        duplicates = []
         for i, item in enumerate(self.items):
             details = self.get_item_details(item)
-            if details in duplicates:
-                duplicates[details].append(item)
-            else:
-                matching_items = [i for i in self.items[i+1:] if self.get_item_details(i) == details]
-                if matching_items:
-                    duplicates[details] = [item] + matching_items
-        return duplicates.values()
+            matching_items = [j for j in self.items[i+1:] if self.get_item_details(j) == details]
+            if matching_items:
+                duplicates.append([item] + matching_items)
+        return duplicates
 
     def show_duplicate_manager(self):
         duplicates = self.find_duplicates()
@@ -37,7 +65,7 @@ class OnePasswordTool:
             messagebox.showinfo('No Duplicates Found', 'No duplicate items were found.')
             return
 
-        print("Found the following duplicates: {}", duplicates)
+        logging.info("Found the following duplicates: {}", duplicates)
 
         root = tk.Tk()
         root.title('1Password Duplicate Manager')
@@ -70,15 +98,28 @@ class OnePasswordTool:
                 continue
             for j in range(1, len(duplicate)):
                 if archive_var.get():
-                    print(['op', 'archive', 'item', duplicate[j]])
-                    #subprocess.run(['op', 'archive', 'item', duplicate[j]])
+                    logging.warn(['op', 'archive', 'item', duplicate[j]])
                 if merge_var.get():
-                    print(['op', 'edit', 'item', duplicate[0], 'set', 'details', self.get_item_details(duplicate[j])])
-                    print(['op', 'delete', 'item', duplicate[j]])
-                    #subprocess.run(['op', 'edit', 'item', duplicate[0], 'set', 'details', self.get_item_details(duplicate[j])])
-                    #subprocess.run(['op', 'delete', 'item', duplicate[j]])
+                    logging.warn(['op', 'edit', 'item', duplicate[0], 'set', 'details', self.get_item_details(duplicate[j])])
+                    logging.warn(['op', 'delete', 'item', duplicate[j]])
+
+
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: python op-dedupe.py VAULT_NAME")
+        return
+
+    vault = sys.argv[1]
+    tool = OpTool(vault)
+    tool.get_items()
+
+    duplicates = tool.find_duplicates()
+    if not duplicates:
+        print("No duplicate items found.")
+        return
+
+    tool.show_duplicate_manager()
 
 
 if __name__ == "__main__":
-    tool = OnePasswordTool()
-    tool.show_duplicate_manager()
+    main()
