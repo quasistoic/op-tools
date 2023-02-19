@@ -2,6 +2,7 @@
 
 import subprocess
 import tkinter as tk
+from tkinter import messagebox
 
 
 class OnePasswordTool:
@@ -33,7 +34,7 @@ class OnePasswordTool:
     def show_duplicate_manager(self):
         duplicates = self.find_duplicates()
         if not duplicates:
-            tk.messagebox.showinfo('No Duplicates Found', 'No duplicate items were found.')
+            messagebox.showinfo('No Duplicates Found', 'No duplicate items were found.')
             return
         root = tk.Tk()
         root.title('1Password Duplicate Manager')
