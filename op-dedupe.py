@@ -66,17 +66,20 @@ class OpTool:
 
     def __init__(self, vault):
         self.vault = vault
-        self.root = tk.Tk()
-        self.root.title('1Password Duplicate Manager')
+        self.create_root()
         self.items = self.get_items()
 
+    def create_root(self):
+        self.root = tk.Tk()
+        self.root.title('1Password Duplicate Manager')
 
-    def run_command(self, command):
+    def run_command(self, command, skip_cache=False):
         cache_file = f"./.op-cache/.{self.vault}.{command}.cache"
-        if os.path.exists(cache_file):
-            logging.debug(f"pulling from cache: {cache_file}")
-            with open(cache_file, "rb") as f:
-                return pickle.load(f)
+        if not skip_cache:
+            if os.path.exists(cache_file):
+                logging.debug(f"pulling from cache: {cache_file}")
+                with open(cache_file, "rb") as f:
+                    return pickle.load(f)
 
         op_command = f"op {command}"
         if self.vault:
@@ -87,17 +90,23 @@ class OpTool:
             pickle.dump(output, f)
         return output
 
-    def get_items(self):
-        output = self.run_command("item list")
-        return [line.split()[0] for line in output.split("\n")[3:-1]]
+    def get_items(self, force_refresh=False):
+        output = self.run_command("item list", skip_cache=force_refresh)
+        items = [line.split()[0] for line in output.split("\n")[3:-1]]
+        logging.info(f"Found {len(items)} total items.")
+        return items
 
     def get_item_details(self, item):
         output = self.run_command(f"item get {item}")
         return ItemDetails(output)
 
-    def delete_item(self, item):
-        self.run_command(f"delete item {item}")
-        self.items.remove(item)
+    def archive_item(self, item_id):
+        logging.warning(f"Archiving item {item_id}")
+        self.run_command(f"item delete {item_id} --archive")
+        self.items = self.get_items(force_refresh=True)
+        self.root.destroy()
+        self.create_root()
+        self.run()
 
     def find_duplicates(self):
         duplicates = []
@@ -116,23 +125,17 @@ class OpTool:
         logging.info(f"Found {len(duplicates)} sets of duplicates.")
         return duplicates
 
-    def apply_changes(self, duplicate_set, canonical_item, archive_var, merge_var):
+    def apply_changes(self, selected_items):
         """Apply changes to the given set of duplicates."""
-        for item in duplicate_set:
-            if item == canonical_item:
-                continue
-            if archive_var.get():
-                logging.warning(['op', 'archive', 'item', item.id], file=sys.stderr)
-            if merge_var.get():
-                logging.warning(['op', 'edit', 'item', canonical_item.id, 'set', 'details',
-                                  self.get_item_details(item.id)], file=sys.stderr)
-                logging.warning(['op', 'delete', 'item', item.id], file=sys.stderr)
+        for item in selected_items:
+            self.archive_item(item.id)
 
     def display_duplicate_set(self, duplicate_set):
         """Display the selected duplicate set for management."""
         items = [self.get_item_details(item.id) for item in duplicate_set]
         field_names = sorted(set(field_name for item in items for field_name in item.fields.keys()))
         field_values = [[item.fields.get(field_name, '') for field_name in field_names] for item in items]
+        archive_vars = [tk.BooleanVar(value=False) for item in items]
 
         top = tk.Toplevel(self.root)
         top.title('1Password Duplicate Manager')
@@ -141,9 +144,22 @@ class OpTool:
         table_frame = tk.Frame(top)
         table_frame.pack(side="top", fill="both", expand=True)
 
+        # Create header row with Archive checkboxes
+        header_frame = tk.Frame(table_frame, relief=tk.RIDGE, borderwidth=1)
+        header_frame.pack(side="top", fill="both", expand=True)
+        tk.Label(header_frame, text="Archive").pack(side="left", fill="both", expand=True)
+        for i, item in enumerate(items):
+            header_cell = tk.Frame(header_frame, relief=tk.RIDGE, borderwidth=1)
+            header_cell.pack(side="left", fill="both", expand=True)
+            options_cell = tk.Frame(header_cell, relief=tk.RIDGE, borderwidth=1)
+            options_cell.pack(side="bottom")
+            tk.Label(header_cell, text=item.id).pack(side="left", fill="both", expand=True)
+            archive_cb = tk.Checkbutton(options_cell, text='Archive', variable=archive_vars[i])
+            archive_cb.pack(side="bottom")
+
         # Create table rows
         for j, field_name in enumerate(field_names):
-            if field_name in ['ID', 'Version', 'Vault', 'Tags']:
+            if field_name in ['ID', 'Version', 'Tags']:
                 continue
             row_has_diff_values = any(item.fields.get(field_name) != field_values[0][j] for item in items)
             if row_has_diff_values:
@@ -155,27 +171,17 @@ class OpTool:
                     row_cell.pack(side="left", fill="both", expand=True)
                     field_value = field_values[i][j]
                     label = tk.Label(row_cell, text=field_value)
-
                     label.pack(side="top", fill="both", expand=True)
 
-        archive_var = tk.BooleanVar(value=False)
-        archive_cb = tk.Checkbutton(top, text='Archive duplicates', variable=archive_var)
-        archive_cb.pack()
-
-        merge_var = tk.BooleanVar(value=False)
-        merge_cb = tk.Checkbutton(top, text='Merge duplicates', variable=merge_var)
-        merge_cb.pack()
-
         def apply():
-            canonical_item = items[listbox.curselection()[0]]
-            self.apply_changes(duplicate_set, canonical_item, archive_var, merge_var)
+            selected_items = [item for i, item in enumerate(items) if archive_vars[i].get()]
             top.destroy()
+            self.apply_changes(selected_items)
 
         apply_button = tk.Button(top, text="Apply Changes", command=apply)
         apply_button.pack()
 
         top.mainloop()
-
 
 
     def run(self):
