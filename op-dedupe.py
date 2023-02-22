@@ -61,20 +61,15 @@ class ItemDetails:
         return self.domains & other.domains
 
 
+class OpApi:
 
-class OpTool:
-
-    def __init__(self, vault):
+    def __init__(self, cache_dir="./.op-cache", vault=None):
         self.vault = vault
-        self.create_root()
-        self.items = self.get_items()
-
-    def create_root(self):
-        self.root = tk.Tk()
-        self.root.title('1Password Duplicate Manager')
+        self.cache_dir = cache_dir
+        self.item_ids = self.get_item_ids()
 
     def run_command(self, command, skip_cache=False):
-        cache_file = f"./.op-cache/.{self.vault}.{command}.cache"
+        cache_file = f"{self.cache_dir}/.{self.vault}.{command}.cache"
         if not skip_cache:
             if os.path.exists(cache_file):
                 logging.debug(f"pulling from cache: {cache_file}")
@@ -90,7 +85,10 @@ class OpTool:
             pickle.dump(output, f)
         return output
 
-    def get_items(self, force_refresh=False):
+    def refresh_item_ids(self):
+        self.item_ids = self.get_item_ids(force_refresh=True)
+
+    def get_item_ids(self, force_refresh=False):
         output = self.run_command("item list", skip_cache=force_refresh)
         items = [line.split()[0] for line in output.split("\n")[3:-1]]
         logging.info(f"Found {len(items)} total items.")
@@ -103,24 +101,61 @@ class OpTool:
     def archive_item(self, item_id):
         logging.warning(f"Archiving item {item_id}")
         self.run_command(f"item delete {item_id} --archive")
-        self.items = self.get_items(force_refresh=True)
-        self.root.destroy()
+        self.refresh_item_ids()
+
+
+class DuplicateSet:
+
+    def __init__(self, items):
+        self.items = items
+        self.field_names = self.get_field_names()
+        self.field_values = self.get_field_values()
+
+    def get_display_name(self):
+        return self.items[0].get_shared_domains(self.items[1])
+
+    def get_field_names(self):
+        return sorted(set(field_name for item in self.items for field_name in item.fields.keys()))
+
+    def get_field_values(self):
+          return [[item.fields.get(field_name, '') for field_name in self.field_names] for item in self.items]
+
+    def difference_score(self):
+        score = 0
+        for j, field_name in enumerate(self.field_names):
+            row_has_diff_values = any(item.fields.get(field_name) != self.field_values[0][j] for item in self.items)
+            if row_has_diff_values:
+                score += 1
+                if field_name.lower() == "password":
+                    score += 10
+                elif field_name.lower() == "username":
+                    score +=5
+        return score
+
+
+class OpTool:
+
+    def __init__(self, vault):
+        self.op_api = OpApi(vault=vault)
         self.create_root()
-        self.run()
+
+    def create_root(self):
+        self.root = tk.Tk()
+        self.root.title('1Password Duplicate Manager')
 
     def find_duplicates(self):
         duplicates = []
-        for i, item in enumerate(self.items):
-            details = self.get_item_details(item)
+        for i, item_id in enumerate(self.op_api.item_ids):
+            details = self.op_api.get_item_details(item_id)
             if details:
                 matching_items = []
-                for j in self.items[i+1:]:
-                    j_details = self.get_item_details(j)
+                for j in self.op_api.item_ids[i+1:]:
+                    j_details = self.op_api.get_item_details(j)
                     if j_details.is_duplicate(details) and str(j_details) != str(details):
                         matching_items.append(j_details)
                 if matching_items:
-                    logging.debug(f"Found duplicates: {item}\n{matching_items}")
-                    duplicates.append([details] + matching_items)
+                    logging.debug(f"Found duplicates: {item_id}\n{matching_items}")
+                    duplicates.append(DuplicateSet([details] + matching_items))
 
         logging.info(f"Found {len(duplicates)} sets of duplicates.")
         return duplicates
@@ -128,13 +163,16 @@ class OpTool:
     def apply_changes(self, selected_items):
         """Apply changes to the given set of duplicates."""
         for item in selected_items:
-            self.archive_item(item.id)
+            self.op_api.archive_item(item.id)
+        self.root.destroy()
+        self.create_root()
+        self.run()
 
     def display_duplicate_set(self, duplicate_set):
         """Display the selected duplicate set for management."""
-        items = [self.get_item_details(item.id) for item in duplicate_set]
-        field_names = sorted(set(field_name for item in items for field_name in item.fields.keys()))
-        field_values = [[item.fields.get(field_name, '') for field_name in field_names] for item in items]
+        items = duplicate_set.items
+        field_names = duplicate_set.field_names
+        field_values = duplicate_set.field_values
         archive_vars = [tk.BooleanVar(value=False) for item in items]
 
         top = tk.Toplevel(self.root)
@@ -166,7 +204,7 @@ class OpTool:
                 row_frame = tk.Frame(table_frame, relief=tk.RIDGE, borderwidth=1)
                 row_frame.pack(side="top", fill="both", expand=True)
                 tk.Label(row_frame, text=field_name).pack(side="left", fill="both", expand=True)
-                for i in range(len(duplicate_set)):
+                for i in range(len(duplicate_set.items)):
                     row_cell = tk.Frame(row_frame, relief=tk.RIDGE, borderwidth=1)
                     row_cell.pack(side="left", fill="both", expand=True)
                     field_value = field_values[i][j]
@@ -192,10 +230,11 @@ class OpTool:
 
         logging.debug("Found the following duplicates: {}", duplicates)
 
-        for i, duplicate_set in enumerate(duplicates):
-            button_text = duplicate_set[0].get_shared_domains(duplicate_set[1])
-            button = tk.Button(self.root, text=button_text,
-                               command=lambda i=i: self.display_duplicate_set(duplicates[i]))
+        for duplicate_set in sorted(duplicates, key=lambda x: x.difference_score()):
+            button_text = f"{duplicate_set.difference_score()}: {duplicate_set.get_display_name()}"
+            button = tk.Button(
+                self.root, text=button_text,
+                command=lambda dup_set=duplicate_set: self.display_duplicate_set(dup_set))
             button.pack()
 
         self.root.mainloop()
