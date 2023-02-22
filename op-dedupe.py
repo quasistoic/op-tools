@@ -143,17 +143,20 @@ class OpTool:
 
         # Create table rows
         for j, field_name in enumerate(field_names):
-            row_frame = tk.Frame(table_frame, relief=tk.RIDGE, borderwidth=1)
-            row_frame.pack(side="top", fill="both", expand=True)
-            tk.Label(row_frame, text=field_name).pack(side="left", fill="both", expand=True)
-            for i in range(len(duplicate_set)):
-                row_cell = tk.Frame(row_frame, relief=tk.RIDGE, borderwidth=1)
-                row_cell.pack(side="left", fill="both", expand=True)
-                field_value = field_values[i][j]
-                label = tk.Label(row_cell, text=field_value)
-                if any(item.fields.get(field_name) != field_value for item in items):
-                    label.config(bg="grey", fg="black")
-                label.pack(side="top", fill="both", expand=True)
+            if field_name in ['ID', 'Version', 'Vault', 'Tags']:
+                continue
+            row_has_diff_values = any(item.fields.get(field_name) != field_values[0][j] for item in items)
+            if row_has_diff_values:
+                row_frame = tk.Frame(table_frame, relief=tk.RIDGE, borderwidth=1)
+                row_frame.pack(side="top", fill="both", expand=True)
+                tk.Label(row_frame, text=field_name).pack(side="left", fill="both", expand=True)
+                for i in range(len(duplicate_set)):
+                    row_cell = tk.Frame(row_frame, relief=tk.RIDGE, borderwidth=1)
+                    row_cell.pack(side="left", fill="both", expand=True)
+                    field_value = field_values[i][j]
+                    label = tk.Label(row_cell, text=field_value)
+
+                    label.pack(side="top", fill="both", expand=True)
 
         archive_var = tk.BooleanVar(value=False)
         archive_cb = tk.Checkbutton(top, text='Archive duplicates', variable=archive_var)
@@ -172,6 +175,7 @@ class OpTool:
         apply_button.pack()
 
         top.mainloop()
+
 
 
     def run(self):
