@@ -13,6 +13,14 @@ from urllib.parse import urlparse
 
 
 def get_domain_from_url(url):
+    """Return the domain of a URL.
+
+    Args:
+        url (str): A string representing the URL.
+
+    Returns:
+        str: The domain of the URL.
+    """
     parsed_url = urlparse(url)
     domain = parsed_url.netloc
     if domain.startswith('www.'):
@@ -55,6 +63,7 @@ class ItemDetails:
 
 
 class OpTool:
+
     def __init__(self, vault):
         self.vault = vault
         self.items = self.get_items()
@@ -107,7 +116,8 @@ class OpTool:
     def show_duplicate_manager(self):
         duplicates = self.find_duplicates()
         if not duplicates:
-            messagebox.showinfo('No Duplicates Found', 'No duplicate items were found.')
+            messagebox.showinfo('No Duplicates Found',
+                'No duplicate items were found.')
             return
 
         logging.debug("Found the following duplicates: {}", duplicates)
@@ -121,18 +131,27 @@ class OpTool:
                     continue
                 for j in range(1, len(duplicate_set)):
                     if archive_var.get():
-                        logging.warning(['op', 'archive', 'item', duplicate_set[j].id], file=sys.stderr)
+                        logging.warning(
+                            ['op', 'archive', 'item', duplicate_set[j].id],
+                             file=sys.stderr)
                     if merge_var.get():
-                        logging.warning(['op', 'edit', 'item', duplicate_set[0].id, 'set', 'details',
-                            self.get_item_details(duplicate_set[j].id)], file=sys.stderr)
-                        logging.warning(['op', 'delete', 'item', duplicate_set[j].id], file=sys.stderr)
+                        logging.warning(
+                            ['op', 'edit', 'item', duplicate_set[0].id,
+                             'set', 'details',
+                             self.get_item_details(duplicate_set[j].id)],
+                             file=sys.stderr)
+                        logging.warning(
+                            ['op', 'delete', 'item', duplicate_set[j].id],
+                             file=sys.stderr)
 
         def display_duplicate_set(i, root):
             nonlocal duplicates
             root.destroy()
             root = tk.Tk()
             root.title('1Password Duplicate Manager')
-            label = tk.Label(root, text='Select the canonical item for this set of duplicates:')
+            label = tk.Label(
+                root,
+                text='Select the canonical item for this set of duplicates:')
             label.pack()
 
             duplicate = duplicates[i]
@@ -151,7 +170,9 @@ class OpTool:
                     for j, item in enumerate(duplicate):
                         if j != index:
                             logging.info(f"Editing item {item}")
-                            logging.warning(['op', 'edit', 'item', item, 'set', 'details', self.get_item_details(canonical_item.id)])
+                            logging.warning(
+                                ['op', 'edit', 'item', item, 'set', 'details',
+                                 self.get_item_details(canonical_item.id)])
                             logging.warning(['op', 'delete', 'item', item])
 
             listbox.bind('<<ListboxSelect>>', on_select)
@@ -165,13 +186,19 @@ class OpTool:
         label = tk.Label(root, text='Select a set of duplicates to manage:')
         label.pack()
         for i, duplicate in enumerate(duplicates):
-            button = tk.Button(root, text=duplicate[0].get_shared_domains(duplicate[1]), command=lambda i=i: display_duplicate_set(i, root))
+            button = tk.Button(
+                root,
+                text=duplicate[0].get_shared_domains(duplicate[1]),
+                command=lambda i=i: display_duplicate_set(i, root))
             button.pack()
         root.mainloop()
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s', stream=sys.stderr)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s:%(levelname)s:%(message)s',
+        stream=sys.stderr)
 
     if len(sys.argv) != 2:
         print("Usage: python op-dedupe.py VAULT_NAME")
