@@ -66,7 +66,10 @@ class OpTool:
 
     def __init__(self, vault):
         self.vault = vault
+        self.root = tk.Tk()
+        self.root.title('1Password Duplicate Manager')
         self.items = self.get_items()
+
 
     def run_command(self, command):
         cache_file = f"./.op-cache/.{self.vault}.{command}.cache"
@@ -113,85 +116,67 @@ class OpTool:
         logging.info(f"Found {len(duplicates)} sets of duplicates.")
         return duplicates
 
-    def show_duplicate_manager(self):
+    def apply_changes(self, duplicate_set, canonical_item, archive_var, merge_var):
+        """Apply changes to the given set of duplicates."""
+        for item in duplicate_set:
+            if item == canonical_item:
+                continue
+            if archive_var.get():
+                logging.warning(['op', 'archive', 'item', item.id], file=sys.stderr)
+            if merge_var.get():
+                logging.warning(['op', 'edit', 'item', canonical_item.id, 'set', 'details',
+                                  self.get_item_details(item.id)], file=sys.stderr)
+                logging.warning(['op', 'delete', 'item', item.id], file=sys.stderr)
+
+    def display_duplicate_set(self, duplicate_set):
+        """Display the selected duplicate set for management."""
+        items = [self.get_item_details(item.id) for item in duplicate_set]
+
+        top = tk.Toplevel(self.root)
+        top.title('1Password Duplicate Manager')
+        label = tk.Label(top, text='Select the canonical item for this set of duplicates:')
+        label.pack()
+
+        listbox = tk.Listbox(top, height=len(duplicate_set), selectmode='single')
+        listbox.pack(fill='both', expand=True)
+        for j, item_details in enumerate(items):
+            listbox.insert(j, item_details.serialized)
+
+        archive_var = tk.BooleanVar(value=False)
+        archive_cb = tk.Checkbutton(top, text='Archive duplicates', variable=archive_var)
+        archive_cb.pack()
+
+        merge_var = tk.BooleanVar(value=False)
+        merge_cb = tk.Checkbutton(top, text='Merge duplicates', variable=merge_var)
+        merge_cb.pack()
+
+        def on_select(event):
+            selection = listbox.curselection()
+            if selection:
+                index = selection[0]
+                canonical_item = duplicate_set[index]
+                self.apply_changes(duplicate_set, canonical_item, archive_var, merge_var)
+                top.destroy()
+
+        listbox.bind('<<ListboxSelect>>', on_select)
+
+        top.mainloop()
+
+    def run(self):
         duplicates = self.find_duplicates()
         if not duplicates:
-            messagebox.showinfo('No Duplicates Found',
-                'No duplicate items were found.')
+            messagebox.showinfo('No Duplicates Found', 'No duplicate items were found.')
             return
 
         logging.debug("Found the following duplicates: {}", duplicates)
 
-        def apply_changes():
-            for i, duplicate_set in enumerate(duplicates):
-                canonical_var = root.winfo_children()[i*2].winfo_children()[0].var
-                archive_var = root.winfo_children()[i*2].winfo_children()[1].var
-                merge_var = root.winfo_children()[i*2].winfo_children()[2].var
-                if canonical_var.get():
-                    continue
-                for j in range(1, len(duplicate_set)):
-                    if archive_var.get():
-                        logging.warning(
-                            ['op', 'archive', 'item', duplicate_set[j].id],
-                             file=sys.stderr)
-                    if merge_var.get():
-                        logging.warning(
-                            ['op', 'edit', 'item', duplicate_set[0].id,
-                             'set', 'details',
-                             self.get_item_details(duplicate_set[j].id)],
-                             file=sys.stderr)
-                        logging.warning(
-                            ['op', 'delete', 'item', duplicate_set[j].id],
-                             file=sys.stderr)
-
-        def display_duplicate_set(i, root):
-            nonlocal duplicates
-            root.destroy()
-            root = tk.Tk()
-            root.title('1Password Duplicate Manager')
-            label = tk.Label(
-                root,
-                text='Select the canonical item for this set of duplicates:')
-            label.pack()
-
-            duplicate = duplicates[i]
-            items = [self.get_item_details(item.id) for item in duplicate]
-
-            listbox = tk.Listbox(root, height=len(duplicate), selectmode='single')
-            listbox.pack(fill='both', expand=True)
-            for j, item_details in enumerate(items):
-                listbox.insert(j, item_details.serialized)
-
-            def on_select(event):
-                selection = listbox.curselection()
-                if selection:
-                    index = selection[0]
-                    canonical_item = duplicate[index]
-                    for j, item in enumerate(duplicate):
-                        if j != index:
-                            logging.info(f"Editing item {item}")
-                            logging.warning(
-                                ['op', 'edit', 'item', item, 'set', 'details',
-                                 self.get_item_details(canonical_item.id)])
-                            logging.warning(['op', 'delete', 'item', item])
-
-            listbox.bind('<<ListboxSelect>>', on_select)
-
-            button = tk.Button(root, text='Apply Changes', command=root.destroy)
+        for i, duplicate_set in enumerate(duplicates):
+            button_text = duplicate_set[0].get_shared_domains(duplicate_set[1])
+            button = tk.Button(self.root, text=button_text,
+                               command=lambda i=i: self.display_duplicate_set(duplicates[i]))
             button.pack()
-            root.mainloop()
 
-        root = tk.Tk()
-        root.title('1Password Duplicate Manager')
-        label = tk.Label(root, text='Select a set of duplicates to manage:')
-        label.pack()
-        for i, duplicate in enumerate(duplicates):
-            button = tk.Button(
-                root,
-                text=duplicate[0].get_shared_domains(duplicate[1]),
-                command=lambda i=i: display_duplicate_set(i, root))
-            button.pack()
-        root.mainloop()
+        self.root.mainloop()
 
 
 def main():
@@ -206,8 +191,7 @@ def main():
 
     vault = sys.argv[1]
     tool = OpTool(vault)
-    tool.get_items()
-    tool.show_duplicate_manager()
+    tool.run()
 
 
 if __name__ == "__main__":
