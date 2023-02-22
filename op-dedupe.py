@@ -131,16 +131,29 @@ class OpTool:
     def display_duplicate_set(self, duplicate_set):
         """Display the selected duplicate set for management."""
         items = [self.get_item_details(item.id) for item in duplicate_set]
+        field_names = sorted(set(field_name for item in items for field_name in item.fields.keys()))
+        field_values = [[item.fields.get(field_name, '') for field_name in field_names] for item in items]
 
         top = tk.Toplevel(self.root)
         top.title('1Password Duplicate Manager')
-        label = tk.Label(top, text='Select the canonical item for this set of duplicates:')
-        label.pack()
 
-        listbox = tk.Listbox(top, height=len(duplicate_set), selectmode='single')
-        listbox.pack(fill='both', expand=True)
-        for j, item_details in enumerate(items):
-            listbox.insert(j, item_details.serialized)
+        # Create table frame and header
+        table_frame = tk.Frame(top)
+        table_frame.pack(side="top", fill="both", expand=True)
+
+        # Create table rows
+        for j, field_name in enumerate(field_names):
+            row_frame = tk.Frame(table_frame, relief=tk.RIDGE, borderwidth=1)
+            row_frame.pack(side="top", fill="both", expand=True)
+            tk.Label(row_frame, text=field_name).pack(side="left", fill="both", expand=True)
+            for i in range(len(duplicate_set)):
+                row_cell = tk.Frame(row_frame, relief=tk.RIDGE, borderwidth=1)
+                row_cell.pack(side="left", fill="both", expand=True)
+                field_value = field_values[i][j]
+                label = tk.Label(row_cell, text=field_value)
+                if any(item.fields.get(field_name) != field_value for item in items):
+                    label.config(bg="grey", fg="black")
+                label.pack(side="top", fill="both", expand=True)
 
         archive_var = tk.BooleanVar(value=False)
         archive_cb = tk.Checkbutton(top, text='Archive duplicates', variable=archive_var)
@@ -150,17 +163,16 @@ class OpTool:
         merge_cb = tk.Checkbutton(top, text='Merge duplicates', variable=merge_var)
         merge_cb.pack()
 
-        def on_select(event):
-            selection = listbox.curselection()
-            if selection:
-                index = selection[0]
-                canonical_item = duplicate_set[index]
-                self.apply_changes(duplicate_set, canonical_item, archive_var, merge_var)
-                top.destroy()
+        def apply():
+            canonical_item = items[listbox.curselection()[0]]
+            self.apply_changes(duplicate_set, canonical_item, archive_var, merge_var)
+            top.destroy()
 
-        listbox.bind('<<ListboxSelect>>', on_select)
+        apply_button = tk.Button(top, text="Apply Changes", command=apply)
+        apply_button.pack()
 
         top.mainloop()
+
 
     def run(self):
         duplicates = self.find_duplicates()
