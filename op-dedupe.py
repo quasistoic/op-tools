@@ -52,6 +52,9 @@ class ItemDetails:
 
     @classmethod
     def from_serialized(cls, serialized):
+        # There's an annoying bug here: URLs don't get a proper field name,
+        # so attempting to copy URLs from one item to another just plain doesn't
+        # work. Will kill this method in favor of JSON loading only.
         item_id = None
         domains = set([])
         fields = {}
@@ -62,7 +65,6 @@ class ItemDetails:
                 values = []
                 for i in line_parts[1:]:
                     stripped = i.strip()
-
                     if get_domain_from_url(stripped):
                         stripped = stripped.strip(" (primary)")
                         domains.add(get_domain_from_url(stripped))
@@ -76,8 +78,22 @@ class ItemDetails:
 
     @classmethod
     def from_json(cls, serialized_json):
-        pass
-
+        details = json.loads(serialized_json)
+        item_id = details["id"]
+        fields = {
+            "title": details.get("title", "Untitled"),
+            "tags": details.get("tags", []),
+            "urls": [i["href"] for i in details.get("urls", [])],
+            "vault": details["vault"]["name"],
+            "category": details["category"],
+            "updated_at": details["updated_at"]
+        }
+        for field in details["fields"]:
+            if field.get("value"):
+                fields[field["id"]] = field["value"]
+        domains = set([get_domain_from_url(url) for url in fields["urls"]])
+        return cls(item_id, fields=fields, source=cls.JSON_SOURCE,
+            serialized=serialized_json, domains=domains)
 
 
 class OpApi:
@@ -123,8 +139,8 @@ class OpApi:
         return items
 
     def get_item_details(self, item, force_refresh=False):
-        output = self.run_command(f"item get {item}", skip_cache=force_refresh)
-        return ItemDetails.from_serialized(output)
+        output = self.run_command(f"item get {item} --format=json", skip_cache=force_refresh)
+        return ItemDetails.from_json(output)
 
     def archive_item(self, item_id):
         logging.warning(f"Archiving item {item_id}")
@@ -134,9 +150,13 @@ class OpApi:
     def update_item(self, item_details, fields):
         item_id = item_details.id
         for field_name, values in fields.items():
-            command = f'item edit {item_id} {field_name}="{values[0]}"'
-            for value in values[1:]:
-                command += f' "{value}"'
+            if field_name == "urls":
+                command = f'item edit {item_id} --url "{values[0]}"'
+            elif field_name in ["tags"]:
+                logging.warn(f"Copying {field_name} is currently unimplemented.")
+                continue
+            else:
+                command = f'item edit {item_id} {field_name}="{values}"'
             self.run_command(command, cacheable=False)
         self.get_item_details(item_id, force_refresh=True)
         self.refresh_item_ids()
@@ -183,6 +203,8 @@ class DuplicateSet:
                     field_score *= 10
                 elif field_name.lower() == "username":
                     field_score *= 5
+                elif field_name.lower in ["vault", "updated_at"]:
+                    field_score /= 2
                 score += field_score
         return score
 
@@ -306,7 +328,7 @@ class OpTool:
 
         # Create table rows
         for j, field_name in enumerate(field_names):
-            if field_name in ['ID', 'Version', 'Tags']:
+            if field_name in ["updated_at"]:
                 continue
             row_has_diff_values = any(item.fields.get(field_name) != field_values[0][j] for item in items)
             if row_has_diff_values:
