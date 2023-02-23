@@ -93,7 +93,10 @@ class ItemDetails:
         }
         for field in details["fields"]:
             if field.get("value"):
-                fields[field["id"]] = field["value"]
+                if field.get("label"):
+                    fields[field["label"]] = field["value"]
+                else:
+                    fields[field["id"]] = field["value"]
         domains = set([get_domain_from_url(url) for url in fields["urls"]])
         return cls(item_id, fields=fields, source=cls.JSON_SOURCE,
             serialized=serialized_json, domains=domains)
@@ -168,6 +171,8 @@ class OpApi:
             elif field_name in ["tags"]:
                 logging.warn(f"Copying {field_name} is currently unimplemented.")
                 continue
+            elif values == "":
+                command = f'item edit {item_id} {field_name}[delete]'
             else:
                 command = f'item edit {item_id} {field_name}="{values}"'
             self.run_command(command, cacheable=False)
