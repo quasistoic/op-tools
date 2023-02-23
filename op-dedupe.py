@@ -62,7 +62,9 @@ class ItemDetails:
                 values = []
                 for i in line_parts[1:]:
                     stripped = i.strip()
-                    if stripped != "http:// (primary)" and get_domain_from_url(stripped):
+
+                    if get_domain_from_url(stripped):
+                        stripped = stripped.strip(" (primary)")
                         domains.add(get_domain_from_url(stripped))
                     values.append(stripped)
                 fields[key] = values
@@ -85,8 +87,14 @@ class OpApi:
         self.cache_dir = cache_dir
         self.item_ids = self.get_item_ids()
 
+    def _get_command_cache_file_name(self, command):
+        return f"{self.cache_dir}/.{self.vault}.{command}.cache"
+
+    def clear_details_cache(self, item_id):
+        self.get_item_details(item_id, force_refresh=True)
+
     def run_command(self, command, skip_cache=False, cacheable=True):
-        cache_file = f"{self.cache_dir}/.{self.vault}.{command}.cache"
+        cache_file = self._get_command_cache_file_name(command)
         if cacheable and not skip_cache:
             if os.path.exists(cache_file):
                 logging.debug(f"pulling from cache: {cache_file}")
@@ -262,7 +270,6 @@ class OpTool:
         if field_names_to_copy and target_items:
             for target_item in target_items:
                 self.op_api.copy_field_values(source_item, target_item, field_names_to_copy)
-        messagebox.showinfo("Fields Copied", "Selected fields have been copied.")
         self.details_window.destroy()
         self.root.destroy()
         self.create_root()
