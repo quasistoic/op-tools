@@ -274,17 +274,11 @@ class OpTool:
         """Apply changes to the given set of duplicates."""
         for item in items_to_archive:
             self.op_api.archive_item(item.id)
-        self.root.destroy()
-        self.create_root()
-        self.run()
 
     def mark_as_multiprofile(self, items):
         """Apply changes to the given set of duplicates."""
         for item in items:
             self.op_api.add_tag(item, MULTIPROFILE_TAG)
-        self.root.destroy()
-        self.create_root()
-        self.run()
 
     def show_duplicate_details(self, duplicate, source_index):
         """Display details of a duplicate set and allow the user to copy fields
@@ -394,8 +388,9 @@ class OpTool:
                 self.mark_as_multiprofile(items_to_mark_multi)
             if items_to_archive:
                 self.archive_items(items_to_archive)
-            else:
-              self.show_duplicate_details(duplicate_set)
+            self.root.destroy()
+            self.create_root()
+            self.run()
 
         apply_button = tk.Button(top, text="Apply Changes", command=apply)
         apply_button.pack()
