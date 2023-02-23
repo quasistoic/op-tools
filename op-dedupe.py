@@ -94,6 +94,8 @@ class OpApi:
                     return pickle.load(f)
 
         op_command = f"op {command}"
+        if not skip_cache:
+            op_command += f" --cache"
         if self.vault:
             op_command += f" --vault {self.vault}"
         logging.info(f"Calling API: {op_command}")
@@ -261,6 +263,10 @@ class OpTool:
             for target_item in target_items:
                 self.op_api.copy_field_values(source_item, target_item, field_names_to_copy)
         messagebox.showinfo("Fields Copied", "Selected fields have been copied.")
+        self.details_window.destroy()
+        self.root.destroy()
+        self.create_root()
+        self.run()
 
     def display_duplicate_set(self, duplicate_set):
         """Display the selected duplicate set for management."""
