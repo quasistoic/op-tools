@@ -94,14 +94,32 @@ class OpApi:
         logging.info(f"Found {len(items)} total items.")
         return items
 
-    def get_item_details(self, item):
-        output = self.run_command(f"item get {item}")
+    def get_item_details(self, item, force_refresh=False):
+        output = self.run_command(f"item get {item}", skip_cache=force_refresh)
         return ItemDetails(output)
 
     def archive_item(self, item_id):
         logging.warning(f"Archiving item {item_id}")
         self.run_command(f"item delete {item_id} --archive")
         self.refresh_item_ids()
+
+    def update_item(self, item_details, fields):
+        item_id = item_details.id
+        for field_name, values in fields.items():
+            command = f'item edit {item_id} {field_name}="{values[0]}"'
+            for value in values[1:]:
+                command += f' "{value}"'
+            self.run_command(command)
+        self.get_item_details(item_id, force_refresh=True)
+        self.refresh_item_ids()
+
+    def copy_field_values(self, from_item, to_item, fields):
+        field_values = {}
+        for field_name in fields:
+            if field_name in from_item.fields:
+                field_values[field_name] = from_item.fields[field_name]
+        if field_values:
+            self.update_item(to_item, field_values)
 
 
 class DuplicateSet:
@@ -160,13 +178,54 @@ class OpTool:
         logging.info(f"Found {len(duplicates)} sets of duplicates.")
         return duplicates
 
-    def apply_changes(self, selected_items):
+    def archive_items(self, items_to_archive):
         """Apply changes to the given set of duplicates."""
-        for item in selected_items:
+        for item in items_to_archive:
             self.op_api.archive_item(item.id)
         self.root.destroy()
         self.create_root()
         self.run()
+
+    def show_duplicate_details(self, duplicate, source_index):
+        """Display details of a duplicate set and allow the user to copy fields
+        from the first item to others in the set.
+
+        Args:
+            duplicate (DuplicateSet): The set of duplicate items to display.
+        """
+        self.selected_duplicate = duplicate
+        self.details_window = tk.Toplevel(self.root)
+        self.details_window.title(f"Copying fields from {duplicate.items[source_index].id}")
+        tk.Label(self.details_window, text="Field names").grid(row=0, column=0)
+        tk.Label(self.details_window, text="Values").grid(row=0, column=1)
+        self.copy_vars = []
+        for i, field_name in enumerate(duplicate.field_names):
+            tk.Label(self.details_window, text=field_name).grid(row=i+1, column=0)
+            values = duplicate.field_values[source_index][i]
+            if isinstance(values, list):
+                values = ", ".join(values)
+            tk.Label(self.details_window, text=values).grid(row=i+1, column=1)
+            var = tk.BooleanVar()
+            tk.Checkbutton(self.details_window, variable=var).grid(row=i+1, column=2)
+            self.copy_vars.append(var)
+        tk.Button(self.details_window, text="Copy Selected Fields", command=lambda x=source_index: self.copy_selected_fields(source_index=x)).grid(row=i+2, column=1)
+
+    def copy_selected_fields(self, source_index=0):
+        """Copy the selected fields from one duplicate item to another."""
+        source_item = self.selected_duplicate.items[source_index]
+        field_names_to_copy = []
+        target_items = []
+        for i, var in enumerate(self.copy_vars):
+            if var.get():
+                field_name = self.selected_duplicate.field_names[i]
+                field_names_to_copy.append(field_name)
+                for cur_index, target_item in enumerate(self.selected_duplicate.items):
+                    if cur_index != source_index:
+                        target_items.append(target_item)
+        if field_names_to_copy and target_items:
+            for target_item in target_items:
+                self.op_api.copy_field_values(source_item, target_item, field_names_to_copy)
+        messagebox.showinfo("Fields Copied", "Selected fields have been copied.")
 
     def display_duplicate_set(self, duplicate_set):
         """Display the selected duplicate set for management."""
@@ -193,7 +252,9 @@ class OpTool:
             options_cell.pack(side="bottom")
             tk.Label(header_cell, text=item.id).pack(side="left", fill="both", expand=True)
             archive_cb = tk.Checkbutton(options_cell, text='Archive', variable=archive_vars[i])
-            archive_cb.pack(side="bottom")
+            archive_cb.pack(side="left")
+            copy_button = tk.Button(options_cell, text="Use as copy source", command=lambda x=i,dup_set=duplicate_set: self.show_duplicate_details(dup_set, x))
+            copy_button.pack(side="left")
 
         # Create table rows
         for j, field_name in enumerate(field_names):
@@ -212,9 +273,12 @@ class OpTool:
                     label.pack(side="top", fill="both", expand=True)
 
         def apply():
-            selected_items = [item for i, item in enumerate(items) if archive_vars[i].get()]
+            items_to_archive = [item for i, item in enumerate(items) if archive_vars[i].get()]
             top.destroy()
-            self.apply_changes(selected_items)
+            if items_to_archive:
+                self.archive_items(items_to_archive)
+            else:
+              self.show_duplicate_details(duplicate_set)
 
         apply_button = tk.Button(top, text="Apply Changes", command=apply)
         apply_button.pack()
@@ -227,8 +291,6 @@ class OpTool:
         if not duplicates:
             messagebox.showinfo('No Duplicates Found', 'No duplicate items were found.')
             return
-
-        logging.debug("Found the following duplicates: {}", duplicates)
 
         for duplicate_set in sorted(duplicates, key=lambda x: x.difference_score()):
             button_text = f"{duplicate_set.difference_score()}: {duplicate_set.get_display_name()}"
