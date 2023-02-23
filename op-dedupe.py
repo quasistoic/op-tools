@@ -182,6 +182,14 @@ class OpApi:
         if field_values:
             self.update_item(to_item, field_values)
 
+    def archive_items(self, items_to_archive):
+        for item in items_to_archive:
+            self.archive_item(item.id)
+
+    def mark_as_multiprofile(self, items):
+        for item in items:
+            self.add_tag(item, MULTIPROFILE_TAG)
+
     def find_duplicates(self):
         duplicates = []
         duplicate_ids = set()
@@ -260,7 +268,7 @@ class DuplicateSet:
         return score
 
 
-class OpTool:
+class OpToolUI:
 
     def __init__(self, vault):
         self.op_api = OpApi(vault=vault)
@@ -269,16 +277,6 @@ class OpTool:
     def create_root(self):
         self.root = tk.Tk()
         self.root.title('1Password Duplicate Manager')
-
-    def archive_items(self, items_to_archive):
-        """Apply changes to the given set of duplicates."""
-        for item in items_to_archive:
-            self.op_api.archive_item(item.id)
-
-    def mark_as_multiprofile(self, items):
-        """Apply changes to the given set of duplicates."""
-        for item in items:
-            self.op_api.add_tag(item, MULTIPROFILE_TAG)
 
     def show_duplicate_details(self, duplicate, source_index):
         """Display details of a duplicate set and allow the user to copy fields
@@ -391,9 +389,9 @@ class OpTool:
             items_to_mark_multi = [item for i, item in enumerate(items) if multiprofile_vars[i].get()]
             top.destroy()
             if items_to_mark_multi:
-                self.mark_as_multiprofile(items_to_mark_multi)
+                self.op_api.mark_as_multiprofile(items_to_mark_multi)
             if items_to_archive:
-                self.archive_items(items_to_archive)
+                self.op_api.archive_items(items_to_archive)
             self.root.destroy()
             self.create_root()
             self.run()
@@ -431,7 +429,7 @@ def main():
         return
 
     vault = sys.argv[1]
-    tool = OpTool(vault)
+    tool = OpToolUI(vault)
     tool.run()
 
 
