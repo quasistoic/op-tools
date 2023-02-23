@@ -347,10 +347,13 @@ class OpToolUI:
         # Create a canvas widget and place the table frame inside it
         canvas = tk.Canvas(table_frame)
         canvas.pack(side="left", fill="both", expand=True)
-        scrollbar = tk.Scrollbar(table_frame, orient="vertical", command=canvas.yview)
-        scrollbar.pack(side="right", fill="y")
-        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar_y = tk.Scrollbar(table_frame, orient="vertical", command=canvas.yview)
+        scrollbar_y.pack(side="right", fill="y")
+        scrollbar_x = tk.Scrollbar(table_frame, orient="horizontal", command=canvas.xview)
+        scrollbar_x.pack(side="bottom", fill="x")
+        canvas.configure(xscrollcommand=scrollbar_x.set, yscrollcommand=scrollbar_y.set)
         canvas.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
         inner_frame = tk.Frame(canvas)
         canvas.create_window((0, 0), window=inner_frame, anchor="nw")
 
