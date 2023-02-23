@@ -159,13 +159,19 @@ class DuplicateSet:
     def difference_score(self):
         score = 0
         for j, field_name in enumerate(self.field_names):
-            row_has_diff_values = any(item.fields.get(field_name) != self.field_values[0][j] for item in self.items)
+            existing_values = {element for sublist in [
+                self.field_values[i][j] for i in range(len(self.items))
+                ] for element in sublist}
+            row_has_diff_values = len(existing_values) > 1
             if row_has_diff_values:
-                score += 1
+                field_score = 1
+                if '' not in existing_values:
+                    field_score += 1
                 if field_name.lower() == "password":
-                    score += 10
+                    field_score *= 10
                 elif field_name.lower() == "username":
-                    score +=5
+                    field_score *= 5
+                score += field_score
         return score
 
 
