@@ -182,6 +182,34 @@ class OpApi:
         if field_values:
             self.update_item(to_item, field_values)
 
+    def find_duplicates(self):
+        duplicates = []
+        duplicate_ids = set()
+        for i, item_id in enumerate(self.item_ids):
+            if item_id in duplicate_ids:
+                logging.debug(f"Skipping {item_id} because we know it's a duplicate.")
+                continue
+            logging.debug(f"Looking for duplicates of {item_id}")
+            details = self.get_item_details(item_id)
+            if details:
+                matching_items = []
+                for j in self.item_ids[i+1:]:
+                    if j in duplicate_ids:
+                        logging.debug(f"Skipping {j} (inner loop) because we know it's a duplicate.")
+                        continue
+                    j_details = self.get_item_details(j)
+                    if j_details.is_duplicate(details) and str(j_details) != str(details):
+                        matching_items.append(j_details)
+                if matching_items:
+                    duplicate_set = DuplicateSet([details] + matching_items)
+                    if duplicate_set.is_intentionally_multiprofile():
+                        continue
+                    duplicates.append(duplicate_set)
+                    duplicate_ids.update([item.id for item in duplicate_set.items])
+
+        logging.info(f"Found {len(duplicates)} sets of duplicates.")
+        return duplicates
+
 
 class DuplicateSet:
 
@@ -242,34 +270,6 @@ class OpTool:
         self.root = tk.Tk()
         self.root.title('1Password Duplicate Manager')
 
-    def find_duplicates(self):
-        duplicates = []
-        duplicate_ids = set()
-        for i, item_id in enumerate(self.op_api.item_ids):
-            if item_id in duplicate_ids:
-                logging.debug(f"Skipping {item_id} because we know it's a duplicate.")
-                continue
-            logging.debug(f"Looking for duplicates of {item_id}")
-            details = self.op_api.get_item_details(item_id)
-            if details:
-                matching_items = []
-                for j in self.op_api.item_ids[i+1:]:
-                    if j in duplicate_ids:
-                        logging.debug(f"Skipping {j} (inner loop) because we know it's a duplicate.")
-                        continue
-                    j_details = self.op_api.get_item_details(j)
-                    if j_details.is_duplicate(details) and str(j_details) != str(details):
-                        matching_items.append(j_details)
-                if matching_items:
-                    duplicate_set = DuplicateSet([details] + matching_items)
-                    if duplicate_set.is_intentionally_multiprofile():
-                        continue
-                    duplicates.append(duplicate_set)
-                    duplicate_ids.update([item.id for item in duplicate_set.items])
-
-        logging.info(f"Found {len(duplicates)} sets of duplicates.")
-        return duplicates
-
     def archive_items(self, items_to_archive):
         """Apply changes to the given set of duplicates."""
         for item in items_to_archive:
@@ -290,8 +290,12 @@ class OpTool:
         self.selected_duplicate = duplicate
         self.details_window = tk.Toplevel(self.root)
         self.details_window.title(f"Copying fields from {duplicate.items[source_index].id}")
+
+        # Create labels
         tk.Label(self.details_window, text="Field names").grid(row=0, column=0)
         tk.Label(self.details_window, text="Values").grid(row=0, column=1)
+
+        # Create checkboxes for selecting fields to copy
         self.copy_vars = []
         for i, field_name in enumerate(duplicate.field_names):
             tk.Label(self.details_window, text=field_name).grid(row=i+1, column=0)
@@ -302,6 +306,8 @@ class OpTool:
             var = tk.BooleanVar()
             tk.Checkbutton(self.details_window, variable=var).grid(row=i+1, column=2)
             self.copy_vars.append(var)
+
+        # Create Copy Selected Fields button
         tk.Button(self.details_window, text="Copy Selected Fields", command=lambda x=source_index: self.copy_selected_fields(source_index=x)).grid(row=i+2, column=1)
 
     def copy_selected_fields(self, source_index=0):
@@ -399,7 +405,7 @@ class OpTool:
 
 
     def run(self):
-        duplicates = self.find_duplicates()
+        duplicates = self.op_api.find_duplicates()
         if not duplicates:
             messagebox.showinfo('No Duplicates Found', 'No duplicate items were found.')
             return
