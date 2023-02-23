@@ -179,6 +179,9 @@ class OpApi:
         for field_name in fields:
             if field_name in from_item.fields:
                 field_values[field_name] = from_item.fields[field_name]
+            else:
+                # I guess we're erasing this field. TODO: Prompt to confirm.
+                field_values[field_name] = ''
         if field_values:
             self.update_item(to_item, field_values)
 
@@ -283,24 +286,36 @@ class OpToolUI:
         self.details_window = tk.Toplevel(self.root)
         self.details_window.title(f"Copying fields from {duplicate.items[source_index].id}")
 
+        # Create a scrollable frame for the labels, checkboxes, and button
+        scroll_frame = tk.Frame(self.details_window)
+        scroll_frame.pack(side="top", fill="both", expand=True)
+        canvas = tk.Canvas(scroll_frame)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar = tk.Scrollbar(scroll_frame, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        inner_frame = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=inner_frame, anchor="nw")
+
         # Create labels
-        tk.Label(self.details_window, text="Field names").grid(row=0, column=0)
-        tk.Label(self.details_window, text="Values").grid(row=0, column=1)
+        tk.Label(inner_frame, text="Field names").grid(row=0, column=0)
+        tk.Label(inner_frame, text="Values").grid(row=0, column=1)
 
         # Create checkboxes for selecting fields to copy
         self.copy_vars = []
         for i, field_name in enumerate(duplicate.field_names):
-            tk.Label(self.details_window, text=field_name).grid(row=i+1, column=0)
+            tk.Label(inner_frame, text=field_name).grid(row=i+1, column=0)
             values = duplicate.field_values[source_index][i]
             if isinstance(values, list):
                 values = ", ".join(values)
-            tk.Label(self.details_window, text=values).grid(row=i+1, column=1)
+            tk.Label(inner_frame, text=values).grid(row=i+1, column=1)
             var = tk.BooleanVar()
-            tk.Checkbutton(self.details_window, variable=var).grid(row=i+1, column=2)
+            tk.Checkbutton(inner_frame, variable=var).grid(row=i+1, column=2)
             self.copy_vars.append(var)
 
         # Create Copy Selected Fields button
-        tk.Button(self.details_window, text="Copy Selected Fields", command=lambda x=source_index: self.copy_selected_fields(source_index=x)).grid(row=i+2, column=1)
+        tk.Button(inner_frame, text="Copy Selected Fields", command=lambda x=source_index: self.copy_selected_fields(source_index=x)).grid(row=i+2, column=1)
 
     def copy_selected_fields(self, source_index=0):
         """Copy the selected fields from one duplicate item to another."""
@@ -314,6 +329,8 @@ class OpToolUI:
                 for cur_index, target_item in enumerate(self.selected_duplicate.items):
                     if cur_index != source_index:
                         target_items.append(target_item)
+        logging.info(f"Field names to copy: {field_names_to_copy}")
+        logging.info(f"Target items: {[item.id for item in target_items]}")
         if field_names_to_copy and target_items:
             for target_item in target_items:
                 self.op_api.copy_field_values(source_item, target_item, field_names_to_copy)
