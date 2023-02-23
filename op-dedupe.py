@@ -163,17 +163,26 @@ class OpTool:
 
     def find_duplicates(self):
         duplicates = []
+        duplicate_ids = set()
         for i, item_id in enumerate(self.op_api.item_ids):
+            if item_id in duplicate_ids:
+                logging.debug(f"Skipping {item_id} because we know it's a duplicate.")
+                continue
+            logging.debug(f"Looking for duplicates of {item_id}")
             details = self.op_api.get_item_details(item_id)
             if details:
                 matching_items = []
                 for j in self.op_api.item_ids[i+1:]:
+                    if j in duplicate_ids:
+                        logging.debug(f"Skipping {j} (inner loop) because we know it's a duplicate.")
+                        continue
                     j_details = self.op_api.get_item_details(j)
                     if j_details.is_duplicate(details) and str(j_details) != str(details):
                         matching_items.append(j_details)
                 if matching_items:
-                    logging.debug(f"Found duplicates: {item_id}\n{matching_items}")
-                    duplicates.append(DuplicateSet([details] + matching_items))
+                    duplicate_set = DuplicateSet([details] + matching_items)
+                    duplicates.append(duplicate_set)
+                    duplicate_ids.update([item.id for item in duplicate_set.items])
 
         logging.info(f"Found {len(duplicates)} sets of duplicates.")
         return duplicates
