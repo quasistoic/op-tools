@@ -68,9 +68,9 @@ class OpApi:
         self.cache_dir = cache_dir
         self.item_ids = self.get_item_ids()
 
-    def run_command(self, command, skip_cache=False):
+    def run_command(self, command, skip_cache=False, cacheable=True):
         cache_file = f"{self.cache_dir}/.{self.vault}.{command}.cache"
-        if not skip_cache:
+        if cacheable and not skip_cache:
             if os.path.exists(cache_file):
                 logging.debug(f"pulling from cache: {cache_file}")
                 with open(cache_file, "rb") as f:
@@ -81,8 +81,9 @@ class OpApi:
             op_command += f" --vault {self.vault}"
         logging.info(f"Calling API: {op_command}")
         output = os.popen(op_command).read()
-        with open(cache_file, "wb") as f:
-            pickle.dump(output, f)
+        if cacheable:
+            with open(cache_file, "wb") as f:
+                pickle.dump(output, f)
         return output
 
     def refresh_item_ids(self):
@@ -100,7 +101,7 @@ class OpApi:
 
     def archive_item(self, item_id):
         logging.warning(f"Archiving item {item_id}")
-        self.run_command(f"item delete {item_id} --archive")
+        self.run_command(f"item delete {item_id} --archive", cacheable=False)
         self.refresh_item_ids()
 
     def update_item(self, item_details, fields):
@@ -109,7 +110,7 @@ class OpApi:
             command = f'item edit {item_id} {field_name}="{values[0]}"'
             for value in values[1:]:
                 command += f' "{value}"'
-            self.run_command(command)
+            self.run_command(command, cacheable=False)
         self.get_item_details(item_id, force_refresh=True)
         self.refresh_item_ids()
 
@@ -244,7 +245,7 @@ class OpTool:
         archive_vars = [tk.BooleanVar(value=False) for item in items]
 
         top = tk.Toplevel(self.root)
-        top.title('1Password Duplicate Manager')
+        top.title(f"1Password Duplicate Manager: {duplicate_set.get_display_name()}")
 
         # Create table frame and header
         table_frame = tk.Frame(top)
