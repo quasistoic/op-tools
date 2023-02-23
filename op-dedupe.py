@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import logging
 import os
 import pickle
@@ -29,27 +30,16 @@ def get_domain_from_url(url):
 
 
 class ItemDetails:
+    SERIALIZED_SOURCE = "serialized"
+    JSON_SOURCE = "json"
 
-    def __init__(self, serialized):
-        self.id = None
+    def __init__(self, item_id, fields=(), source=None,
+            serialized=None, domains=frozenset([])):
+        self.id = item_id
         self.serialized = serialized
-        self.domains = set([])
-        details = {}
-        for line in serialized.split("\n"):
-            items = line.strip().split(": ")
-            if len(items) >= 2:
-                key = items[0].strip()
-                values = []
-                for i in items[1:]:
-                    stripped = i.strip()
-                    if stripped != "http:// (primary)" and get_domain_from_url(stripped):
-                        self.domains.add(get_domain_from_url(stripped))
-                    values.append(stripped)
-                details[key] = values
-        self.fields = details
-        self.id = self.fields['ID'][0]
-        if self.domains:
-            logging.debug(f"Domains for {self.fields['ID']} : {self.domains}")
+        self.source = source
+        self.fields = fields
+        self.domains = domains
 
     def __str__(self):
         return str(sorted(self.fields.items()))
@@ -59,6 +49,33 @@ class ItemDetails:
 
     def get_shared_domains(self, other):
         return self.domains & other.domains
+
+    @classmethod
+    def from_serialized(cls, serialized):
+        item_id = None
+        domains = set([])
+        fields = {}
+        for line in serialized.split("\n"):
+            line_parts = line.strip().split(": ")
+            if len(line_parts) >= 2:
+                key = line_parts[0].strip()
+                values = []
+                for i in line_parts[1:]:
+                    stripped = i.strip()
+                    if stripped != "http:// (primary)" and get_domain_from_url(stripped):
+                        domains.add(get_domain_from_url(stripped))
+                    values.append(stripped)
+                fields[key] = values
+        item_id = fields['ID'][0]
+        if domains:
+            logging.debug(f"Domains for {item_id} : {domains}")
+        return cls(item_id, fields=fields, source=cls.SERIALIZED_SOURCE,
+            serialized=serialized, domains=domains)
+
+    @classmethod
+    def from_json(cls, serialized_json):
+        pass
+
 
 
 class OpApi:
@@ -97,7 +114,7 @@ class OpApi:
 
     def get_item_details(self, item, force_refresh=False):
         output = self.run_command(f"item get {item}", skip_cache=force_refresh)
-        return ItemDetails(output)
+        return ItemDetails.from_serialized(output)
 
     def archive_item(self, item_id):
         logging.warning(f"Archiving item {item_id}")
