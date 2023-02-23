@@ -13,6 +13,8 @@ from tkinter import messagebox
 
 from urllib.parse import urlparse
 
+MULTIPROFILE_TAG = "multiprofile"
+
 
 def get_domain_from_url(url):
     """Return the domain of a URL.
@@ -149,6 +151,15 @@ class OpApi:
         self.run_command(f"item delete {item_id} --archive", cacheable=False)
         self.refresh_item_ids()
 
+    def add_tag(self, item_details, tag):
+        item_id = item_details.id
+        all_tags = item_details.fields["tags"] + [tag]
+        command = f'item edit {item_id} --tags "{all_tags[0]}"'
+        for other_tag in all_tags[1:]:
+            command += f',"{other_tag}"'
+        self.run_command(command, cacheable=False)
+        self.get_item_details(item_id, force_refresh=True)
+
     def update_item(self, item_details, fields):
         item_id = item_details.id
         for field_name, values in fields.items():
@@ -189,6 +200,9 @@ class DuplicateSet:
           return [[item.fields.get(field_name, '')
                    for field_name in self.field_names]
                   for item in self.items]
+
+    def is_intentionally_multiprofile(self):
+        return all(MULTIPROFILE_TAG in item.fields["tags"] for item in self.items)
 
     def difference_score(self):
         score = 0
@@ -248,6 +262,8 @@ class OpTool:
                         matching_items.append(j_details)
                 if matching_items:
                     duplicate_set = DuplicateSet([details] + matching_items)
+                    if duplicate_set.is_intentionally_multiprofile():
+                        continue
                     duplicates.append(duplicate_set)
                     duplicate_ids.update([item.id for item in duplicate_set.items])
 
@@ -258,6 +274,14 @@ class OpTool:
         """Apply changes to the given set of duplicates."""
         for item in items_to_archive:
             self.op_api.archive_item(item.id)
+        self.root.destroy()
+        self.create_root()
+        self.run()
+
+    def mark_as_multiprofile(self, items):
+        """Apply changes to the given set of duplicates."""
+        for item in items:
+            self.op_api.add_tag(item, MULTIPROFILE_TAG)
         self.root.destroy()
         self.create_root()
         self.run()
@@ -319,6 +343,7 @@ class OpTool:
         field_names = duplicate_set.field_names
         field_values = duplicate_set.field_values
         archive_vars = [tk.BooleanVar(value=False) for item in items]
+        multiprofile_vars = [tk.BooleanVar(value=False) for item in items]
 
         top = tk.Toplevel(self.root)
         top.title(f"1Password Duplicate Manager: {duplicate_set.get_display_name()}")
@@ -340,6 +365,8 @@ class OpTool:
             tk.Label(header_cell, text=item.id).pack(side="left", fill="both", expand=True)
             archive_cb = tk.Checkbutton(options_cell, text='Archive', variable=archive_vars[i])
             archive_cb.pack(side="left")
+            multiprofile_cb = tk.Checkbutton(options_cell, text='Mark as multiprofile', variable=multiprofile_vars[i])
+            multiprofile_cb.pack(side="left")
             copy_button = tk.Button(options_cell, text="Use as copy source", command=lambda x=i,dup_set=duplicate_set: self.show_duplicate_details(dup_set, x))
             copy_button.pack(side="left")
 
@@ -361,7 +388,10 @@ class OpTool:
 
         def apply():
             items_to_archive = [item for i, item in enumerate(items) if archive_vars[i].get()]
+            items_to_mark_multi = [item for i, item in enumerate(items) if multiprofile_vars[i].get()]
             top.destroy()
+            if items_to_mark_multi:
+                self.mark_as_multiprofile(items_to_mark_multi)
             if items_to_archive:
                 self.archive_items(items_to_archive)
             else:
