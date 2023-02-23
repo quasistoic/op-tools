@@ -326,14 +326,15 @@ class OpToolUI:
         """Copy the selected fields from one duplicate item to another."""
         source_item = self.selected_duplicate.items[source_index]
         field_names_to_copy = []
-        target_items = []
+        target_items = set()
         for i, var in enumerate(self.copy_vars):
             if var.get():
                 field_name = self.selected_duplicate.field_names[i]
                 field_names_to_copy.append(field_name)
                 for cur_index, target_item in enumerate(self.selected_duplicate.items):
                     if cur_index != source_index:
-                        target_items.append(target_item)
+                        target_items.add(target_item)
+        target_items = list(target_items)
         logging.info(f"Field names to copy: {field_names_to_copy}")
         logging.info(f"Target items: {[item.id for item in target_items]}")
         if field_names_to_copy and target_items:
