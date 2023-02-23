@@ -154,7 +154,9 @@ class DuplicateSet:
         return sorted(set(field_name for item in self.items for field_name in item.fields.keys()))
 
     def get_field_values(self):
-          return [[item.fields.get(field_name, '') for field_name in self.field_names] for item in self.items]
+          return [[item.fields.get(field_name, '')
+                   for field_name in self.field_names]
+                  for item in self.items]
 
     def difference_score(self):
         score = 0
