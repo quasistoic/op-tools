@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import collections
 import json
 import logging
 import os
@@ -138,8 +139,9 @@ class OpApi:
         logging.info(f"Found {len(items)} total items.")
         return items
 
-    def get_item_details(self, item, force_refresh=False):
-        output = self.run_command(f"item get {item} --format=json", skip_cache=force_refresh)
+    def get_item_details(self, item_id, force_refresh=False):
+        output = self.run_command(f"item get {item_id} --format=json",
+            skip_cache=force_refresh)
         return ItemDetails.from_json(output)
 
     def archive_item(self, item_id):
@@ -191,12 +193,19 @@ class DuplicateSet:
     def difference_score(self):
         score = 0
         for j, field_name in enumerate(self.field_names):
-            existing_values = {element for sublist in [
-                self.field_values[i][j] for i in range(len(self.items))
-                ] for element in sublist}
+            existing_values = set()
+            for i in range(len(self.items)):
+                for j in range(len(self.field_values[i])):
+                    item_value = self.field_values[i][j]
+                    if hasattr(item_value, '__iter__') and not isinstance(item_value, str):
+                        for element in item_value:
+                            existing_values.add(element)
+                    else:
+                        existing_values.add(item_value)
+
             row_has_diff_values = len(existing_values) > 1
             if row_has_diff_values:
-                field_score = 1
+                field_score = len(existing_values)
                 if '' not in existing_values:
                     field_score += 1
                 if field_name.lower() == "password":
@@ -297,6 +306,13 @@ class OpTool:
         self.create_root()
         self.run()
 
+    def refresh_duplicate_set(self, duplicate_set, frame):
+        updated_items = []
+        for item in duplicate_set.items:
+            updated_items.append(self.op_api.get_item_details(item.id, force_refresh=True))
+        frame.destroy()
+        self.display_duplicate_set(DuplicateSet(updated_items))
+
     def display_duplicate_set(self, duplicate_set):
         """Display the selected duplicate set for management."""
         items = duplicate_set.items
@@ -314,7 +330,8 @@ class OpTool:
         # Create header row with Archive checkboxes
         header_frame = tk.Frame(table_frame, relief=tk.RIDGE, borderwidth=1)
         header_frame.pack(side="top", fill="both", expand=True)
-        tk.Label(header_frame, text="Archive").pack(side="left", fill="both", expand=True)
+        refresh_button = tk.Button(header_frame, text="Force Refresh", command=lambda frame=top,dup_set=duplicate_set: self.refresh_duplicate_set(dup_set, frame))
+        refresh_button.pack(side="left")
         for i, item in enumerate(items):
             header_cell = tk.Frame(header_frame, relief=tk.RIDGE, borderwidth=1)
             header_cell.pack(side="left", fill="both", expand=True)
