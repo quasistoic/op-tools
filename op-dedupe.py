@@ -279,12 +279,6 @@ class OpToolUI:
         self.root.title('1Password Duplicate Manager')
 
     def show_duplicate_details(self, duplicate, source_index):
-        """Display details of a duplicate set and allow the user to copy fields
-        from the first item to others in the set.
-
-        Args:
-            duplicate (DuplicateSet): The set of duplicate items to display.
-        """
         self.selected_duplicate = duplicate
         self.details_window = tk.Toplevel(self.root)
         self.details_window.title(f"Copying fields from {duplicate.items[source_index].id}")
@@ -350,8 +344,18 @@ class OpToolUI:
         table_frame = tk.Frame(top)
         table_frame.pack(side="top", fill="both", expand=True)
 
+        # Create a canvas widget and place the table frame inside it
+        canvas = tk.Canvas(table_frame)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar = tk.Scrollbar(table_frame, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        inner_frame = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=inner_frame, anchor="nw")
+
         # Create header row with Archive checkboxes
-        header_frame = tk.Frame(table_frame, relief=tk.RIDGE, borderwidth=1)
+        header_frame = tk.Frame(inner_frame, relief=tk.RIDGE, borderwidth=1)
         header_frame.pack(side="top", fill="both", expand=True)
         refresh_button = tk.Button(header_frame, text="Force Refresh", command=lambda frame=top,dup_set=duplicate_set: self.refresh_duplicate_set(dup_set, frame))
         refresh_button.pack(side="left")
@@ -374,7 +378,7 @@ class OpToolUI:
                 continue
             row_has_diff_values = any(item.fields.get(field_name) != field_values[0][j] for item in items)
             if row_has_diff_values:
-                row_frame = tk.Frame(table_frame, relief=tk.RIDGE, borderwidth=1)
+                row_frame = tk.Frame(inner_frame, relief=tk.RIDGE, borderwidth=1)
                 row_frame.pack(side="top", fill="both", expand=True)
                 tk.Label(row_frame, text=field_name).pack(side="left", fill="both", expand=True)
                 for i in range(len(duplicate_set.items)):
