@@ -401,7 +401,6 @@ class OpToolUI:
 
         top.mainloop()
 
-
     def run(self):
         duplicates = self.op_api.find_duplicates()
         if not duplicates:
