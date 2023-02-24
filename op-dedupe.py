@@ -299,10 +299,11 @@ class OpToolUI:
         # Create a scrollable frame for the labels, checkboxes, and button
         scroll_frame = tk.Frame(self.details_window)
         scroll_frame.pack(side="top", fill="both", expand=True)
+        scrollbar = tk.Scrollbar(scroll_frame, orient="vertical")
+        scrollbar.pack(side="right", fill="y")
         canvas = tk.Canvas(scroll_frame)
         canvas.pack(side="left", fill="both", expand=True)
-        scrollbar = tk.Scrollbar(scroll_frame, orient="vertical", command=canvas.yview)
-        scrollbar.pack(side="right", fill="y")
+        scrollbar.config(command=canvas.yview)
         canvas.configure(yscrollcommand=scrollbar.set)
         canvas.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         inner_frame = tk.Frame(canvas)
@@ -373,12 +374,15 @@ class OpToolUI:
         table_frame.pack(side="top", fill="both", expand=True)
 
         # Create a canvas widget and place the table frame inside it
+        scrollbar_y = tk.Scrollbar(table_frame, orient="vertical")
+        scrollbar_y.pack(side="right", fill="y")
+        scrollbar_x = tk.Scrollbar(table_frame, orient="horizontal")
+        scrollbar_x.pack(side="bottom", fill="x")
         canvas = tk.Canvas(table_frame)
         canvas.pack(side="left", fill="both", expand=True)
-        scrollbar_y = tk.Scrollbar(table_frame, orient="vertical", command=canvas.yview)
-        scrollbar_y.pack(side="right", fill="y")
-        scrollbar_x = tk.Scrollbar(table_frame, orient="horizontal", command=canvas.xview)
-        scrollbar_x.pack(side="bottom", fill="x")
+        scrollbar_y.config(command=canvas.yview)
+        scrollbar_x.config(command=canvas.xview)
+
         canvas.configure(xscrollcommand=scrollbar_x.set, yscrollcommand=scrollbar_y.set)
         canvas.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
