@@ -462,11 +462,9 @@ def main():
         format='%(asctime)s:%(levelname)s:%(message)s',
         stream=sys.stderr)
 
-    if len(sys.argv) != 2:
-        print("Usage: python op-dedupe.py VAULT_NAME")
-        return
-
-    vault = sys.argv[1]
+    vault = None
+    if len(sys.argv) >= 2:
+        vault = sys.argv[1]
     tool = OpToolUI(vault)
     tool.run()
 
