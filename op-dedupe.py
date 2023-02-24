@@ -147,7 +147,12 @@ class OpApi:
     def get_item_details(self, item_id, force_refresh=False):
         output = self.run_command(f"item get {item_id} --format=json",
             skip_cache=force_refresh)
-        return ItemDetails.from_json(output)
+        try:
+            item = ItemDetails.from_json(output)
+        except json.decoder.JSONDecodeError as e:
+            logging.error(f"Error while attempting to read: {item_id}")
+            sys.exit(1)
+        return item
 
     def archive_item(self, item_id):
         logging.warning(f"Archiving item {item_id}")
