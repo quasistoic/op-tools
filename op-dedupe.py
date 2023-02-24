@@ -107,6 +107,8 @@ class OpApi:
     def __init__(self, cache_dir="./.op-cache", vault=None):
         self.vault = vault
         self.cache_dir = cache_dir
+        if not os.path.exists(self.cache_dir):
+            os.mkdir(self.cache_dir)
         self.item_ids = self.get_item_ids()
 
     def _get_command_cache_file_name(self, command):
