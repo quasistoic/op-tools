@@ -7,10 +7,10 @@ import os
 import pickle
 import subprocess
 import sys
-
 import tkinter as tk
-from tkinter import messagebox
 
+from functools import cached_property
+from tkinter import messagebox
 from urllib.parse import urlparse
 
 MULTIPROFILE_TAG = "multiprofile"
@@ -32,9 +32,28 @@ def get_domain_from_url(url):
     return domain
 
 
+class ItemList:
+
+    def __init__(self, item_details_list):
+        self.items = item_details_list
+
+    def __iter__(self):
+        for i in self.items:
+            yield i
+
+    @classmethod
+    def from_json(cls, serialized_json):
+        raw_items = json.loads(serialized_json)
+        item_details_list = []
+        for raw_item in raw_items:
+            item_details_list.append(ItemDetails.from_list(raw_item))
+        return cls(item_details_list)
+
+
 class ItemDetails:
     SERIALIZED_SOURCE = "serialized"
     JSON_SOURCE = "json"
+    JSON_LIST_SOURCE = "list_skeleton"
 
     def __init__(self, item_id, fields=(), source=None,
             serialized=None, domains=frozenset([])):
@@ -52,6 +71,9 @@ class ItemDetails:
 
     def get_shared_domains(self, other):
         return self.domains & other.domains
+
+    def has_full_details(self):
+        return ItemDetails.JSON_SOURCE == self.source
 
     @classmethod
     def from_serialized(cls, serialized):
@@ -101,6 +123,21 @@ class ItemDetails:
         return cls(item_id, fields=fields, source=cls.JSON_SOURCE,
             serialized=serialized_json, domains=domains)
 
+    @classmethod
+    def from_list(cls, details):
+        item_id = details["id"]
+        fields = {
+            "title": details.get("title", "Untitled"),
+            "tags": details.get("tags", []),
+            "urls": [i["href"] for i in details.get("urls", [])],
+            "vault": details["vault"]["name"],
+            "category": details["category"],
+            "updated_at": details["updated_at"]
+        }
+        domains = set([get_domain_from_url(url) for url in fields["urls"]])
+        return cls(item_id, fields=fields, source=cls.JSON_LIST_SOURCE,
+            domains=domains)
+
 
 class OpApi:
 
@@ -109,7 +146,8 @@ class OpApi:
         self.cache_dir = cache_dir
         if not os.path.exists(self.cache_dir):
             os.mkdir(self.cache_dir)
-        self.item_ids = self.get_item_ids()
+        self.items = self.get_item_list()
+        self.item_ids = [item.id for item in self.items]
 
     def _get_command_cache_file_name(self, command):
         return f"{self.cache_dir}/.{self.vault}.{command}.cache"
@@ -138,13 +176,14 @@ class OpApi:
         return output
 
     def refresh_item_ids(self):
-        self.item_ids = self.get_item_ids(force_refresh=True)
+        self.items = self.get_item_list(force_refresh=True)
+        self.item_ids = [item.id for item in self.items]
 
-    def get_item_ids(self, force_refresh=False):
-        output = self.run_command("item list", skip_cache=force_refresh)
-        items = [line.split()[0] for line in output.split("\n")[3:-1]]
-        logging.info(f"Found {len(items)} total items.")
-        return items
+    def get_item_list(self, force_refresh=False):
+        output = self.run_command(f"item list --format=json",
+            skip_cache=force_refresh)
+        item_list = ItemList.from_json(output)
+        return item_list
 
     def get_item_details(self, item_id, force_refresh=False):
         output = self.run_command(f"item get {item_id} --format=json",
@@ -221,7 +260,7 @@ class OpApi:
                         logging.debug(f"Skipping {j} (inner loop) because we know it's a duplicate.")
                         continue
                     j_details = self.get_item_details(j)
-                    if j_details.is_duplicate(details) and str(j_details) != str(details):
+                    if j_details.is_duplicate(details) and j_details.id != details.id:
                         matching_items.append(j_details)
                 if matching_items:
                     duplicate_set = DuplicateSet([details] + matching_items)
@@ -236,21 +275,38 @@ class OpApi:
 
 class DuplicateSet:
 
-    def __init__(self, items):
+    def __init__(self, items, op_api=None):
+        self.op_api = op_api
         self.items = items
-        self.field_names = self.get_field_names()
-        self.field_values = self.get_field_values()
 
     def get_display_name(self):
         return self.items[0].get_shared_domains(self.items[1])
 
-    def get_field_names(self):
+    def has_full_details(self):
+        return all(item.has_full_details() for item in self.items)
+
+    def force_full_details(self):
+        if self.has_full_details():
+            return
+
+        for i, item in enumerate(self.items[:]):
+            if i.has_full_details():
+                continue
+            new_item = self.op_api.get_item_details(item_id)
+            self.items[i] = new_item
+
+    @cached_property
+    def field_names(self):
+        self.force_full_details()
         return sorted(set(field_name for item in self.items for field_name in item.fields.keys()))
 
-    def get_field_values(self):
-          return [[item.fields.get(field_name, '')
-                   for field_name in self.field_names]
-                  for item in self.items]
+    @cached_property
+    def field_values(self):
+        self.force_full_details()
+        return [
+            [item.fields.get(field_name, '') for field_name in self.field_names]
+            for item in self.items
+        ]
 
     def is_intentionally_multiprofile(self):
         return all(MULTIPROFILE_TAG in item.fields["tags"] for item in self.items)
@@ -307,7 +363,8 @@ class OpToolUI:
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=canvas.yview)
         canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.bind("<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         inner_frame = tk.Frame(canvas)
         canvas.create_window((0, 0), window=inner_frame, anchor="nw")
 
@@ -328,7 +385,9 @@ class OpToolUI:
             self.copy_vars.append(var)
 
         # Create Copy Selected Fields button
-        tk.Button(inner_frame, text="Copy Selected Fields", command=lambda x=source_index: self.copy_selected_fields(source_index=x)).grid(row=i+2, column=1)
+        tk.Button(inner_frame, text="Copy Selected Fields",
+            command=lambda x=source_index: self.copy_selected_fields(source_index=x)
+        ).grid(row=i+2, column=1)
 
     def copy_selected_fields(self, source_index=0):
         """Copy the selected fields from one duplicate item to another."""
