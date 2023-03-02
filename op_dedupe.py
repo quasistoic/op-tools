@@ -7,8 +7,6 @@ from tkinter import messagebox
 
 import op_api
 
-MULTIPROFILE_TAG = "multiprofile"
-
 
 class OpToolUI:
     """Controller for the Tkinter Duplicate Manager GUI."""
