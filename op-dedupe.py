@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
-import collections
 import json
 import logging
 import os
 import pickle
-import subprocess
 import sys
 import tkinter as tk
 
@@ -97,7 +95,7 @@ class ItemDetails:
                 fields[key] = values
         item_id = fields['ID'][0]
         if domains:
-            logging.debug(f"Domains for {item_id} : {domains}")
+            logging.debug("Domains for %s : %s", item_id, domains)
         return cls(item_id, fields=fields, source=cls.SERIALIZED_SOURCE,
             serialized=serialized, domains=domains)
 
@@ -119,7 +117,7 @@ class ItemDetails:
                     fields[field["label"]] = field["value"]
                 else:
                     fields[field["id"]] = field["value"]
-        domains = set([get_domain_from_url(url) for url in fields["urls"]])
+        domains = {get_domain_from_url(url) for url in fields["urls"]}
         return cls(item_id, fields=fields, source=cls.JSON_SOURCE,
             serialized=serialized_json, domains=domains)
 
@@ -134,7 +132,7 @@ class ItemDetails:
             "category": details["category"],
             "updated_at": details["updated_at"]
         }
-        domains = set([get_domain_from_url(url) for url in fields["urls"]])
+        domains = {get_domain_from_url(url) for url in fields["urls"]}
         return cls(item_id, fields=fields, source=cls.JSON_LIST_SOURCE,
             domains=domains)
 
@@ -159,20 +157,20 @@ class OpApi:
         cache_file = self._get_command_cache_file_name(command)
         if cacheable and not skip_cache:
             if os.path.exists(cache_file):
-                logging.debug(f"pulling from cache: {cache_file}")
-                with open(cache_file, "rb") as f:
-                    return pickle.load(f)
+                logging.debug("Pulling from cache: %s", cache_file)
+                with open(cache_file, "rb") as cache:
+                    return pickle.load(cache)
 
         op_command = f"op {command}"
         if not skip_cache:
-            op_command += f" --cache"
+            op_command += " --cache"
         if self.vault:
             op_command += f" --vault {self.vault}"
-        logging.info(f"Calling API: {op_command}")
+        logging.info("Calling API: %s", op_command)
         output = os.popen(op_command).read()
         if cacheable:
-            with open(cache_file, "wb") as f:
-                pickle.dump(output, f)
+            with open(cache_file, "wb") as cache:
+                pickle.dump(output, cache)
         return output
 
     def refresh_item_ids(self):
@@ -180,7 +178,7 @@ class OpApi:
         self.item_ids = [item.id for item in self.items]
 
     def get_item_list(self, force_refresh=False):
-        output = self.run_command(f"item list --format=json",
+        output = self.run_command("item list --format=json",
             skip_cache=force_refresh)
         item_list = ItemList.from_json(output)
         return item_list
@@ -190,13 +188,13 @@ class OpApi:
             skip_cache=force_refresh)
         try:
             item = ItemDetails.from_json(output)
-        except json.decoder.JSONDecodeError as e:
-            logging.error(f"Error while attempting to read: {item_id}")
+        except json.decoder.JSONDecodeError:
+            logging.error("Error while attempting to read: %s", item_id)
             sys.exit(1)
         return item
 
     def archive_item(self, item_id):
-        logging.warning(f"Archiving item {item_id}")
+        logging.warning("Archiving item %s", item_id)
         self.run_command(f"item delete {item_id} --archive", cacheable=False)
         self.refresh_item_ids()
 
@@ -215,7 +213,7 @@ class OpApi:
             if field_name == "urls":
                 command = f'item edit {item_id} --url "{values[0]}"'
             elif field_name in ["tags"]:
-                logging.warn(f"Copying {field_name} is currently unimplemented.")
+                logging.warning("Copying %s is currently unimplemented.", field_name)
                 continue
             elif values == "":
                 command = f'item edit {item_id} {field_name}[delete]'
@@ -249,27 +247,32 @@ class OpApi:
         duplicate_ids = set()
         for i, item_id in enumerate(self.item_ids):
             if item_id in duplicate_ids:
-                logging.debug(f"Skipping {item_id} because we know it's a duplicate.")
+                logging.debug("Skipping %s because we know it's a duplicate.", item_id)
                 continue
-            logging.debug(f"Looking for duplicates of {item_id}")
+            logging.debug("Looking for duplicates of %s", item_id)
             details = self.get_item_details(item_id)
             if details:
                 matching_items = []
                 for j in self.item_ids[i+1:]:
                     if j in duplicate_ids:
-                        logging.debug(f"Skipping {j} (inner loop) because we know it's a duplicate.")
+                        logging.debug(
+                            "Skipping %s (inner loop) because we know it's a duplicate.", j)
                         continue
                     j_details = self.get_item_details(j)
-                    if j_details.is_duplicate(details) and j_details.id != details.id:
-                        matching_items.append(j_details)
+                    if j_details.id == details.id:
+                        continue
+                    if not j_details.is_duplicate(details):
+                        continue
+                    matching_items.append(j_details)
                 if matching_items:
                     duplicate_set = DuplicateSet([details] + matching_items)
                     if duplicate_set.is_intentionally_multiprofile():
                         continue
                     duplicates.append(duplicate_set)
-                    duplicate_ids.update([item.id for item in duplicate_set.items])
+                    duplicate_ids.update(
+                        [item.id for item in duplicate_set.items])
 
-        logging.info(f"Found {len(duplicates)} sets of duplicates.")
+        logging.info("Found %s sets of duplicates.", len(duplicates))
         return duplicates
 
 
@@ -292,13 +295,14 @@ class DuplicateSet:
         for i, item in enumerate(self.items[:]):
             if i.has_full_details():
                 continue
-            new_item = self.op_api.get_item_details(item_id)
+            new_item = self.op_api.get_item_details(item.id)
             self.items[i] = new_item
 
     @cached_property
     def field_names(self):
         self.force_full_details()
-        return sorted(set(field_name for item in self.items for field_name in item.fields.keys()))
+        return sorted(set(field_name for item in self.items
+                          for field_name in item.fields.keys()))
 
     @cached_property
     def field_values(self):
@@ -309,15 +313,16 @@ class DuplicateSet:
         ]
 
     def is_intentionally_multiprofile(self):
-        return all(MULTIPROFILE_TAG in item.fields["tags"] for item in self.items)
+        return all(
+            MULTIPROFILE_TAG in item.fields["tags"] for item in self.items)
 
     def difference_score(self):
         score = 0
-        for j, field_name in enumerate(self.field_names):
+        for field_name in self.field_names:
             existing_values = set()
             for i in range(len(self.items)):
-                for j in range(len(self.field_values[i])):
-                    item_value = self.field_values[i][j]
+                for k in range(len(self.field_values[i])):
+                    item_value = self.field_values[i][k]
                     if hasattr(item_value, '__iter__') and not isinstance(item_value, str):
                         for element in item_value:
                             existing_values.add(element)
@@ -344,13 +349,17 @@ class OpToolUI:
     def __init__(self, vault):
         self.op_api = OpApi(vault=vault)
         self.create_root()
+        self.infocus_duplicate_set = None
+        self.copy_vars = []
+        self.details_window = None
+
 
     def create_root(self):
         self.root = tk.Tk()
         self.root.title('1Password Duplicate Manager')
 
     def show_duplicate_details(self, duplicate_set, source_index):
-        self.selected_duplicate_set = duplicate_set
+        self.infocus_duplicate_set = duplicate_set
         self.details_window = tk.Toplevel(self.root)
         self.details_window.title(f"Copying fields from {duplicate_set.items[source_index].id}")
 
@@ -387,23 +396,23 @@ class OpToolUI:
         # Create Copy Selected Fields button
         tk.Button(inner_frame, text="Copy Selected Fields",
             command=lambda x=source_index: self.copy_selected_fields(source_index=x)
-        ).grid(row=i+2, column=1)
+        ).grid(row=len(duplicate_set.field_names)+2, column=1)
 
     def copy_selected_fields(self, source_index=0):
         """Copy the selected fields from one duplicate item to another."""
-        source_item = self.selected_duplicate_set.items[source_index]
+        source_item = self.infocus_duplicate_set.items[source_index]
         field_names_to_copy = []
         target_items = set()
         for i, var in enumerate(self.copy_vars):
             if var.get():
-                field_name = self.selected_duplicate_set.field_names[i]
+                field_name = self.infocus_duplicate_set.field_names[i]
                 field_names_to_copy.append(field_name)
-                for cur_index, target_item in enumerate(self.selected_duplicate_set.items):
+                for cur_index, target_item in enumerate(self.infocus_duplicate_set.items):
                     if cur_index != source_index:
                         target_items.add(target_item)
         target_items = list(target_items)
-        logging.info(f"Field names to copy: {field_names_to_copy}")
-        logging.info(f"Target items: {[item.id for item in target_items]}")
+        logging.info("Field names to copy: %s", field_names_to_copy)
+        logging.info("Target items: %s", [item.id for item in target_items])
         if field_names_to_copy and target_items:
             for target_item in target_items:
                 self.op_api.copy_field_values(source_item, target_item, field_names_to_copy)
@@ -453,7 +462,9 @@ class OpToolUI:
         # Create header row with Archive checkboxes
         header_frame = tk.Frame(inner_frame, relief=tk.RIDGE, borderwidth=1)
         header_frame.pack(side="top", fill="both", expand=True)
-        refresh_button = tk.Button(header_frame, text="Force Refresh", command=lambda frame=top,dup_set=duplicate_set: self.refresh_duplicate_set(dup_set, frame))
+        refresh_button = tk.Button(header_frame, text="Force Refresh",
+            command=lambda frame=top,dup_set=duplicate_set: self.refresh_duplicate_set(dup_set,
+                                                                                       frame))
         refresh_button.pack(side="left")
         for i, item in enumerate(items):
             header_cell = tk.Frame(header_frame, relief=tk.RIDGE, borderwidth=1)
@@ -463,16 +474,20 @@ class OpToolUI:
             tk.Label(header_cell, text=item.id).pack(side="left", fill="both", expand=True)
             archive_cb = tk.Checkbutton(options_cell, text='Archive', variable=archive_vars[i])
             archive_cb.pack(side="left")
-            multiprofile_cb = tk.Checkbutton(options_cell, text='Mark as multiprofile', variable=multiprofile_vars[i])
+            multiprofile_cb = tk.Checkbutton(
+                options_cell, text='Mark as multiprofile', variable=multiprofile_vars[i])
             multiprofile_cb.pack(side="left")
-            copy_button = tk.Button(options_cell, text="Use as copy source", command=lambda x=i,dup_set=duplicate_set: self.show_duplicate_details(dup_set, x))
+            copy_button = tk.Button(
+                options_cell, text="Use as copy source",
+                command=lambda x=i,dup_set=duplicate_set: self.show_duplicate_details(dup_set, x))
             copy_button.pack(side="left")
 
         # Create table rows
         for j, field_name in enumerate(field_names):
             if field_name in ["updated_at"]:
                 continue
-            row_has_diff_values = any(item.fields.get(field_name) != field_values[0][j] for item in items)
+            row_has_diff_values = any(item.fields.get(field_name) != field_values[0][j]
+                                      for item in items)
             if row_has_diff_values:
                 row_frame = tk.Frame(inner_frame, relief=tk.RIDGE, borderwidth=1)
                 row_frame.pack(side="top", fill="both", expand=True)
@@ -486,7 +501,8 @@ class OpToolUI:
 
         def apply():
             items_to_archive = [item for i, item in enumerate(items) if archive_vars[i].get()]
-            items_to_mark_multi = [item for i, item in enumerate(items) if multiprofile_vars[i].get()]
+            items_to_mark_multi = [item for i, item in enumerate(items)
+                                   if multiprofile_vars[i].get()]
             top.destroy()
             if items_to_mark_multi:
                 self.op_api.mark_as_multiprofile(items_to_mark_multi)
