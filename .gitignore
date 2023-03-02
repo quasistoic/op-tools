@@ -1,3 +1,4 @@
 # Ignore op cache
 .op-cache
 __pycache__
+kivy_venv
