@@ -31,6 +31,7 @@ def get_domain_from_url(url):
 
 
 class ItemList:
+    """A list of 1Password items."""
 
     def __init__(self, item_details_list):
         self.items = item_details_list
@@ -49,6 +50,8 @@ class ItemList:
 
 
 class ItemDetails:
+    """A single 1Password item."""
+
     SERIALIZED_SOURCE = "serialized"
     JSON_SOURCE = "json"
     JSON_LIST_SOURCE = "list_skeleton"
@@ -72,32 +75,6 @@ class ItemDetails:
 
     def has_full_details(self):
         return ItemDetails.JSON_SOURCE == self.source
-
-    @classmethod
-    def from_serialized(cls, serialized):
-        # There's an annoying bug here: URLs don't get a proper field name,
-        # so attempting to copy URLs from one item to another just plain doesn't
-        # work. Will kill this method in favor of JSON loading only.
-        item_id = None
-        domains = set([])
-        fields = {}
-        for line in serialized.split("\n"):
-            line_parts = line.strip().split(": ")
-            if len(line_parts) >= 2:
-                key = line_parts[0].strip()
-                values = []
-                for i in line_parts[1:]:
-                    stripped = i.strip()
-                    if get_domain_from_url(stripped):
-                        stripped = stripped.strip(" (primary)")
-                        domains.add(get_domain_from_url(stripped))
-                    values.append(stripped)
-                fields[key] = values
-        item_id = fields['ID'][0]
-        if domains:
-            logging.debug("Domains for %s : %s", item_id, domains)
-        return cls(item_id, fields=fields, source=cls.SERIALIZED_SOURCE,
-            serialized=serialized, domains=domains)
 
     @classmethod
     def from_json(cls, serialized_json):
@@ -138,6 +115,7 @@ class ItemDetails:
 
 
 class OpApi:
+    """Connection Manager for the 1Password API."""
 
     def __init__(self, cache_dir="./.op-cache", vault=None):
         self.vault = vault
@@ -277,6 +255,7 @@ class OpApi:
 
 
 class DuplicateSet:
+    """Container for a set of 1Password items that are considered duplicates of each other."""
 
     def __init__(self, items, op_api=None):
         self.op_api = op_api
@@ -345,6 +324,7 @@ class DuplicateSet:
 
 
 class OpToolUI:
+    """Controller for the Tkinter Duplicate Manager GUI."""
 
     def __init__(self, vault):
         self.op_api = OpApi(vault=vault)
