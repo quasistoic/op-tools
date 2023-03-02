@@ -55,7 +55,7 @@ class ItemDetails:
 
     def __init__(self, item_id, fields=(), source=None,
             serialized=None, domains=frozenset([])):
-        self.id = item_id
+        self.item_id = item_id
         self.serialized = serialized
         self.source = source
         self.fields = fields
@@ -145,7 +145,7 @@ class OpApi:
         if not os.path.exists(self.cache_dir):
             os.mkdir(self.cache_dir)
         self.items = self.get_item_list()
-        self.item_ids = [item.id for item in self.items]
+        self.item_ids = [item.item_id for item in self.items]
 
     def _get_command_cache_file_name(self, command):
         return f"{self.cache_dir}/.{self.vault}.{command}.cache"
@@ -175,7 +175,7 @@ class OpApi:
 
     def refresh_item_ids(self):
         self.items = self.get_item_list(force_refresh=True)
-        self.item_ids = [item.id for item in self.items]
+        self.item_ids = [item.item_id for item in self.items]
 
     def get_item_list(self, force_refresh=False):
         output = self.run_command("item list --format=json",
@@ -199,7 +199,7 @@ class OpApi:
         self.refresh_item_ids()
 
     def add_tag(self, item_details, tag):
-        item_id = item_details.id
+        item_id = item_details.item_id
         all_tags = item_details.fields["tags"] + [tag]
         command = f'item edit {item_id} --tags "{all_tags[0]}"'
         for other_tag in all_tags[1:]:
@@ -208,7 +208,7 @@ class OpApi:
         self.get_item_details(item_id, force_refresh=True)
 
     def update_item(self, item_details, fields):
-        item_id = item_details.id
+        item_id = item_details.item_id
         for field_name, values in fields.items():
             if field_name == "urls":
                 command = f'item edit {item_id} --url "{values[0]}"'
@@ -236,7 +236,7 @@ class OpApi:
 
     def archive_items(self, items_to_archive):
         for item in items_to_archive:
-            self.archive_item(item.id)
+            self.archive_item(item.item_id)
 
     def mark_as_multiprofile(self, items):
         for item in items:
@@ -259,7 +259,7 @@ class OpApi:
                             "Skipping %s (inner loop) because we know it's a duplicate.", j)
                         continue
                     j_details = self.get_item_details(j)
-                    if j_details.id == details.id:
+                    if j_details.item_id == details.item_id:
                         continue
                     if not j_details.is_duplicate(details):
                         continue
@@ -270,7 +270,7 @@ class OpApi:
                         continue
                     duplicates.append(duplicate_set)
                     duplicate_ids.update(
-                        [item.id for item in duplicate_set.items])
+                        [item.item_id for item in duplicate_set.items])
 
         logging.info("Found %s sets of duplicates.", len(duplicates))
         return duplicates
@@ -295,7 +295,7 @@ class DuplicateSet:
         for i, item in enumerate(self.items[:]):
             if i.has_full_details():
                 continue
-            new_item = self.op_api.get_item_details(item.id)
+            new_item = self.op_api.get_item_details(item.item_id)
             self.items[i] = new_item
 
     @cached_property
@@ -361,7 +361,8 @@ class OpToolUI:
     def show_duplicate_details(self, duplicate_set, source_index):
         self.infocus_duplicate_set = duplicate_set
         self.details_window = tk.Toplevel(self.root)
-        self.details_window.title(f"Copying fields from {duplicate_set.items[source_index].id}")
+        self.details_window.title(
+            f"Copying fields from {duplicate_set.items[source_index].item_id}")
 
         # Create a scrollable frame for the labels, checkboxes, and button
         scroll_frame = tk.Frame(self.details_window)
@@ -412,7 +413,7 @@ class OpToolUI:
                         target_items.add(target_item)
         target_items = list(target_items)
         logging.info("Field names to copy: %s", field_names_to_copy)
-        logging.info("Target items: %s", [item.id for item in target_items])
+        logging.info("Target items: %s", [item.item_id for item in target_items])
         if field_names_to_copy and target_items:
             for target_item in target_items:
                 self.op_api.copy_field_values(source_item, target_item, field_names_to_copy)
@@ -424,7 +425,7 @@ class OpToolUI:
     def refresh_duplicate_set(self, duplicate_set, frame):
         updated_items = []
         for item in duplicate_set.items:
-            updated_items.append(self.op_api.get_item_details(item.id, force_refresh=True))
+            updated_items.append(self.op_api.get_item_details(item.item_id, force_refresh=True))
         frame.destroy()
         self.display_duplicate_set(DuplicateSet(updated_items))
 
@@ -471,7 +472,7 @@ class OpToolUI:
             header_cell.pack(side="left", fill="both", expand=True)
             options_cell = tk.Frame(header_cell, relief=tk.RIDGE, borderwidth=1)
             options_cell.pack(side="bottom")
-            tk.Label(header_cell, text=item.id).pack(side="left", fill="both", expand=True)
+            tk.Label(header_cell, text=item.item_id).pack(side="left", fill="both", expand=True)
             archive_cb = tk.Checkbutton(options_cell, text='Archive', variable=archive_vars[i])
             archive_cb.pack(side="left")
             multiprofile_cb = tk.Checkbutton(
