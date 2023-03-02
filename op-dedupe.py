@@ -349,10 +349,10 @@ class OpToolUI:
         self.root = tk.Tk()
         self.root.title('1Password Duplicate Manager')
 
-    def show_duplicate_details(self, duplicate, source_index):
-        self.selected_duplicate = duplicate
+    def show_duplicate_details(self, duplicate_set, source_index):
+        self.selected_duplicate_set = duplicate_set
         self.details_window = tk.Toplevel(self.root)
-        self.details_window.title(f"Copying fields from {duplicate.items[source_index].id}")
+        self.details_window.title(f"Copying fields from {duplicate_set.items[source_index].id}")
 
         # Create a scrollable frame for the labels, checkboxes, and button
         scroll_frame = tk.Frame(self.details_window)
@@ -374,9 +374,9 @@ class OpToolUI:
 
         # Create checkboxes for selecting fields to copy
         self.copy_vars = []
-        for i, field_name in enumerate(duplicate.field_names):
+        for i, field_name in enumerate(duplicate_set.field_names):
             tk.Label(inner_frame, text=field_name).grid(row=i+1, column=0)
-            values = duplicate.field_values[source_index][i]
+            values = duplicate_set.field_values[source_index][i]
             if isinstance(values, list):
                 values = ", ".join(values)
             tk.Label(inner_frame, text=values).grid(row=i+1, column=1)
@@ -391,14 +391,14 @@ class OpToolUI:
 
     def copy_selected_fields(self, source_index=0):
         """Copy the selected fields from one duplicate item to another."""
-        source_item = self.selected_duplicate.items[source_index]
+        source_item = self.selected_duplicate_set.items[source_index]
         field_names_to_copy = []
         target_items = set()
         for i, var in enumerate(self.copy_vars):
             if var.get():
-                field_name = self.selected_duplicate.field_names[i]
+                field_name = self.selected_duplicate_set.field_names[i]
                 field_names_to_copy.append(field_name)
-                for cur_index, target_item in enumerate(self.selected_duplicate.items):
+                for cur_index, target_item in enumerate(self.selected_duplicate_set.items):
                     if cur_index != source_index:
                         target_items.add(target_item)
         target_items = list(target_items)
