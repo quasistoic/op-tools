@@ -1,2 +1,3 @@
 # Ignore op cache
 .op-cache
+__pycache__
