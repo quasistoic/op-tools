@@ -19,6 +19,10 @@ import op_api
 
 
 NODISPLAY_FIELDS = frozenset(["updated_at"])
+LIST_SCREEN_ID = "duplicate_set_list"
+SET_DETAILS_SCREEN_ID = "duplicate_set_details"
+ITEM_DETAILS_SCREEN_ID = "individual_item_details"
+
 
 
 class DedupeManager(ScreenManager):
@@ -34,10 +38,10 @@ class ViewSetDetailsButton(Button):
 
     def on_release(self):
         screenmanager = App.get_running_app().sm
-        details_screen = screenmanager.get_screen("duplicate_set_details")
+        details_screen = screenmanager.get_screen(SET_DETAILS_SCREEN_ID)
         details_screen.selected_set = self.selected_set
         screenmanager.transition.direction = 'left'
-        screenmanager.current = "duplicate_set_details"
+        screenmanager.current = SET_DETAILS_SCREEN_ID
 
     def get_display_text(self):
         return f"{self.selected_set.get_display_name()} (Score: {self.selected_set.difference_score()})"
@@ -80,6 +84,7 @@ class DuplicateSetDetails(Screen):
         header_row.add_widget(RowHeaderCell(text=""))
         for i, item in enumerate(items):
             column_header = DuplicateSetDetailsColumnHeader()
+            column_header.selected_set = self.selected_set
             column_header.selected_item = item
             column_header.item_id = item.item_id
             header_row.add_widget(column_header)
@@ -112,13 +117,37 @@ class DuplicateSetDetails(Screen):
 
 
 class IndividualItemDetails(Screen):
+    selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
+    populated_details = StringProperty()
+
+
+    def clear_item_details(self):
+        self.ids.item_details_box.clear_widgets(children=self.ids.item_details_box.children)
+        self.populated_details = ''
+
+    def populate_item_details(self):
+        box = self.ids.item_details_box
+        for i, field_name in enumerate(self.selected_set.field_names):
+            box.add_widget(Label(text=field_name))
+            values = self.selected_item.fields.get(field_name, '')
+            if isinstance(values, list):
+                values = ", ".join(values)
+            box.add_widget(Label(text=values))
+            var = CheckBox()
+            box.add_widget(var)
+        self.populated_details = self.selected_item.item_id
 
     def on_pre_enter(self):
         App.get_running_app().title = f"Item details for {self.selected_item.item_id}"
+        if self.populated_details == self.selected_item.item_id:
+            return
+        self.clear_item_details()
+        self.populate_item_details()
 
 
 class DuplicateSetDetailsColumnHeader(BoxLayout):
+    selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
     item_id = StringProperty('')
 
@@ -160,7 +189,7 @@ class BackToSetButton(Button):
     def on_release(self):
         screenmanager = App.get_running_app().sm
         screenmanager.transition.direction = 'right'
-        screenmanager.current = "duplicate_set_details"
+        screenmanager.current = SET_DETAILS_SCREEN_ID
 
 
 class BackToListButton(Button):
@@ -168,18 +197,20 @@ class BackToListButton(Button):
     def on_release(self):
         screenmanager = App.get_running_app().sm
         screenmanager.transition.direction = 'right'
-        screenmanager.current = "duplicate_set_list"
+        screenmanager.current = LIST_SCREEN_ID
 
 
 class CopyButton(Button):
+    selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
 
     def on_release(self):
         screenmanager = App.get_running_app().sm
-        details_screen = screenmanager.get_screen("individual_item_details")
+        details_screen = screenmanager.get_screen(ITEM_DETAILS_SCREEN_ID)
+        details_screen.selected_set = self.selected_set
         details_screen.selected_item = self.selected_item
         screenmanager.transition.direction = 'left'
-        screenmanager.current = "individual_item_details"
+        screenmanager.current = ITEM_DETAILS_SCREEN_ID
 
 
 class KivyGUI(App):
@@ -202,12 +233,12 @@ class KivyGUI(App):
             self.sm.add_widget(EmptySetList())
             return self.sm
 
-        set_list = DuplicateSetList(name="duplicate_set_list")
+        set_list = DuplicateSetList(name=LIST_SCREEN_ID)
         set_list.sets = sorted(duplicates, key=lambda x: x.difference_score())
         self.sm.add_widget(set_list)
-        set_details = DuplicateSetDetails(name="duplicate_set_details")
+        set_details = DuplicateSetDetails(name=SET_DETAILS_SCREEN_ID)
         self.sm.add_widget(set_details)
-        item_details = IndividualItemDetails(name="individual_item_details")
+        item_details = IndividualItemDetails(name=ITEM_DETAILS_SCREEN_ID)
         self.sm.add_widget(item_details)
         return self.sm
 

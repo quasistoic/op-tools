@@ -75,6 +75,7 @@
         height: 40
         text: "Use as copy source"
         selected_item: root.selected_item
+        selected_set: root.selected_set
 
 <HeaderRow>:
     height: 240
@@ -115,7 +116,7 @@
             GridLayout:
                 size_hint_y: None
                 height: sum(x.height for x in self.children)
-                cols: 1
-                id: set_details_box
+                cols: 3
+                id: item_details_box
             ConfirmCopyButton:
                 text: "Copy to other items in set"
