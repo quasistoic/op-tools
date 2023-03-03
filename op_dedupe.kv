@@ -20,7 +20,7 @@
     ScrollView:
         GridLayout:
             size_hint_y: None
-            height: sum(y.height for y in self.children)
+            height: self.minimum_height
             cols: 1
             BackToListButton:
                 text: "← Back to List View"
@@ -103,7 +103,7 @@
     ScrollView:
         GridLayout:
             size_hint_y: None
-            height: sum(y.height for y in self.children)
+            height: self.minimum_height
             cols: 1
             BackToSetButton:
                 text: "← Back to Set View"
