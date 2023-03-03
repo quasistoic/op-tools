@@ -260,7 +260,7 @@ class DuplicateSet:
         self.items = items
 
     def get_display_name(self):
-        return self.items[0].get_shared_domains(self.items[1])
+        return str(self.items[0].get_shared_domains(self.items[1]))
 
     def has_full_details(self):
         return all(item.has_full_details() for item in self.items)

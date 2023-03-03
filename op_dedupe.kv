@@ -1,5 +1,8 @@
+<Label>:
+    font_name: "Arial"
+
 <Screen>:
-    on_leave: app.previous_screen = self.name
+    on_pre_leave: app.previous_screen = self.name
 
 <EmptySetList>:
     BoxLayout:
@@ -16,29 +19,80 @@
 <DuplicateSetDetails>:
     ScrollView:
         GridLayout:
+            size_hint_y: None
+            height: sum(y.height for y in self.children)
             cols: 1
             BackButton:
-                text: "Back to List View"
-                size_hint_y: .1
+                text: "← Back to List View"
+                size_hint_y: None
+                text_size: self.width, None
+                height: 40
+                width: 100
+                padding_x: 10
+                padding_y: 20
             GridLayout:
+                size_hint_y: None
+                height: sum(x.height for x in self.children)
                 cols: 1
                 id: set_details_box
+            ApplyButton:
+                text: "Apply Changes"
 
 
 <LabeledCheckbox>:
+    height: 160
     orientation: "horizontal"
     Label:
+        size_hint_y: None
+        text_size: self.width, None
+        height: self.texture_size[1]
         text: root.label_text
     CheckBox:
 
+
 <DuplicateSetDetailsColumnHeader>:
     orientation: "vertical"
+    size_hint_y: None
+    height: 160
     Label:
         text: root.item_id
-    LabeledCheckbox:
+        size_hint_y: None
+        text_size: self.width, None
+        height: 40
+    ArchiveCheckbox:
+        size_hint_y: None
+        text_size: self.width, None
+        height: 40
         label_text: "Archive"
-    LabeledCheckbox:
+    MultiprofileCheckbox:
+        size_hint_y: None
+        text_size: self.width, None
+        height: 40
         label_text: "Multiprofile"
-    Button:
+    CopyButton:
+        size_hint_y: None
+        text_size: self.width, None
+        height: 40
         text: "Use as copy source"
 
+<HeaderRow>:
+    height: 240
+    padding_x: 10
+    padding_y: 40
+
+
+<RowHeaderCell>:
+    height: 60
+    text_size: self.size
+    padding: [10,10]
+    halign: "right"
+    valign: "center"
+
+
+<DataCell>:
+    height: 60
+    text_size: self.size
+    padding: [10,10]
+    valign: "center"
+
+<ViewSetDetailsButton>:

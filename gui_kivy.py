@@ -12,10 +12,13 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.popup import Popup
 from kivy.uix.widget import Widget
-from kivy.properties import ListProperty, ObjectProperty, StringProperty
+from kivy.properties import ListProperty, ObjectProperty, StringProperty, BooleanProperty
 from kivy.uix.screenmanager import ScreenManager, Screen
 
 import op_api
+
+
+NODISPLAY_FIELDS = frozenset(["updated_at"])
 
 
 class DedupeManager(ScreenManager):
@@ -25,37 +28,86 @@ class DedupeManager(ScreenManager):
 class EmptySetList(Screen):
     pass
 
+
+class ViewSetDetailsButton(Button):
+    selected_set = ObjectProperty(None)
+
+    def on_release(self):
+        screenmanager = App.get_running_app().sm
+        details_screen = screenmanager.get_screen("duplicate_set_details")
+        details_screen.selected_set = self.selected_set
+        screenmanager.transition.direction = 'left'
+        screenmanager.current = "duplicate_set_details"
+
+    def get_display_text(self):
+        return f"{self.selected_set.get_display_name()} (Score: {self.selected_set.difference_score()})"
+
+
 class DuplicateSetList(Screen):
-
     sets = ObjectProperty(None)
-
-    def release_callback(self, unused_event, this_set):
-        details_screen = self.manager.get_screen("duplicate_set_details")
-        details_screen.selected_set = this_set
-        self.manager.switch_to(details_screen)
+    initialized = BooleanProperty(defaultvalue=False)
 
     def on_pre_enter(self):
+        if self.initialized:
+            return
+
         for this_set in self.sets:
-            b = Button(text=f"{this_set.difference_score()}: {this_set.get_display_name()}")
-            b.bind(on_release=partial(self.release_callback, this_set=this_set))
-            self.ids.set_list_box.add_widget(b);
+            b = ViewSetDetailsButton()
+            b.selected_set = this_set
+            b.text = b.get_display_text()
+            self.ids.set_list_box.add_widget(b)
+        self.initialized = True
 
 
 class DuplicateSetDetails(Screen):
+    # TODO: Make the buttons work.
 
     selected_set = ObjectProperty(None)
+    populated_details = StringProperty()
 
-    def on_pre_enter(self):
+    def clear_set_details(self):
+        self.ids.set_details_box.clear_widgets(children=self.ids.set_details_box.children)
+        self.populated_details = ''
+
+    def populate_set_details(self):
         items = self.selected_set.items
-        logging.info("Looking for %s columns", len(items)+1)
+        column_count = len(items) + 1
+        logging.info("Looking for %s columns", column_count)
         logging.info("Item ids: %s", [item.item_id for item in items])
-        header_row = GridLayout(cols=len(items)+1)
-        header_row.add_widget(Label(text=""))
+
+        # Add a header row with buttons/checkboxes
+        header_row = HeaderRow(cols=column_count)
+        header_row.add_widget(RowHeaderCell(text=""))
         for i, item in enumerate(items):
             column_header = DuplicateSetDetailsColumnHeader()
             column_header.item_id = item.item_id
             header_row.add_widget(column_header)
         self.ids.set_details_box.add_widget(header_row)
+
+        # Add the data rows with field values
+        field_names = self.selected_set.field_names
+        field_values = self.selected_set.field_values
+        for j, field_name in enumerate(field_names):
+            if field_name in NODISPLAY_FIELDS:
+                continue
+            row_values_vary = any(item.fields.get(field_name) != field_values[0][j]
+                                      for item in items)
+            if not row_values_vary:
+                continue
+            row = GridLayout(cols=column_count)
+            row.add_widget(RowHeaderCell(text=field_name))
+            row_values = [str(field_values[i][j]) for i in range(len(self.selected_set.items))]
+            for value in row_values:
+                row.add_widget(DataCell(text=value))
+            self.ids.set_details_box.add_widget(row)
+        self.populated_details = self.selected_set.get_display_name()
+
+    def on_pre_enter(self):
+        App.get_running_app().title = f"Viewing Duplicate Set {self.selected_set.get_display_name()}"
+        if self.populated_details == self.selected_set.get_display_name():
+            return
+        self.clear_set_details()
+        self.populate_set_details()
 
 
 class IndividualItemDetails(Screen):
@@ -69,12 +121,42 @@ class LabeledCheckbox(BoxLayout):
     label_text = StringProperty('')
 
 
+class ArchiveCheckbox(LabeledCheckbox):
+    pass
+
+
+class MultiprofileCheckbox(LabeledCheckbox):
+    pass
+
+
+class HeaderRow(GridLayout):
+    pass
+
+
+class RowHeaderCell(Label):
+    pass
+
+
+class DataCell(Label):
+    pass
+
+
+class ApplyButton(Button):
+    pass
+
+
 class BackButton(Button):
 
     def on_release(self):
         app = App.get_running_app()
-        previous_screen = app.root.get_screen(app.previous_screen)
-        app.root.switch_to(previous_screen)
+        screenmanager = app.sm
+        screenmanager.transition.direction = 'right'
+        screenmanager.current = app.previous_screen
+
+
+
+class CopyButton(Button):
+    pass
 
 
 class KivyGUI(App):
@@ -90,8 +172,8 @@ class KivyGUI(App):
 
 
     def build(self):
+        self.title = "1Password Duplicate Manager"
         Builder.load_file('op_dedupe.kv')
-
         duplicates = self.op_api.find_duplicates()
         if not duplicates:
             self.sm.add_widget(EmptySetList())
@@ -143,8 +225,6 @@ class KivyGUI(App):
     def show_set_details(self, duplicate_set):
         """Display the selected duplicate set for management."""
         items = duplicate_set.items
-        field_names = duplicate_set.field_names
-        field_values = duplicate_set.field_values
         archive_vars = [False for item in items]
         multiprofile_vars = [False for item in items]
 
@@ -168,32 +248,7 @@ class KivyGUI(App):
 
         layout.add_widget(header_row)
 
-        # Create the table rows
-        for j, field_name in enumerate(field_names):
-            if field_name in ["updated_at"]:
-                continue
-            row_has_diff_values = any(item.fields.get(field_name) != field_values[0][j]
-                                      for item in items)
-            if row_has_diff_values:
-                row = GridLayout(cols=len(items)+1, spacing=10, size_hint_y=None, height=40)
-                row.add_widget(Label(text=field_name))
-                for i in range(len(duplicate_set.items)):
-                    field_value = field_values[i][j]
-                    row.add_widget(Label(text=str(field_value)))
-                layout.add_widget(row)
-
-        # Create the Apply Changes button
-        apply_button = Button(text="Apply Changes")
-        layout.add_widget(apply_button)
-
-        # Create the ScrollView widget and add the main layout to it
-        scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
-        scroll_view.add_widget(layout)
-
-        # Create the top-level window
-        top = App.get_running_app().root_window
-        top.title = f"1Password Duplicate Manager: {duplicate_set.get_display_name()}"
-        top.content = scroll_view
+        # STILL NEEDS IMPLEMENTATION AFTER HERE
 
         def apply_changes(*args):
             items_to_archive = [item for i, item in enumerate(items) if archive_vars[i]]
