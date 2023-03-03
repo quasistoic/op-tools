@@ -1,0 +1,44 @@
+<Screen>:
+    on_leave: app.previous_screen = self.name
+
+<EmptySetList>:
+    BoxLayout:
+        orientation: "vertical"
+        Label:
+            text: "No duplicate items were found."
+
+<DuplicateSetList>:
+    ScrollView:
+        BoxLayout:
+            id: set_list_box
+            orientation: "vertical"
+
+<DuplicateSetDetails>:
+    ScrollView:
+        GridLayout:
+            cols: 1
+            BackButton:
+                text: "Back to List View"
+                size_hint_y: .1
+            GridLayout:
+                cols: 1
+                id: set_details_box
+
+
+<LabeledCheckbox>:
+    orientation: "horizontal"
+    Label:
+        text: root.label_text
+    CheckBox:
+
+<DuplicateSetDetailsColumnHeader>:
+    orientation: "vertical"
+    Label:
+        text: root.item_id
+    LabeledCheckbox:
+        label_text: "Archive"
+    LabeledCheckbox:
+        label_text: "Multiprofile"
+    Button:
+        text: "Use as copy source"
+
