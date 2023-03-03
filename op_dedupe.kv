@@ -22,7 +22,7 @@
             size_hint_y: None
             height: sum(y.height for y in self.children)
             cols: 1
-            BackButton:
+            BackToListButton:
                 text: "← Back to List View"
                 size_hint_y: None
                 text_size: self.width, None
@@ -74,6 +74,7 @@
         text_size: self.width, None
         height: 40
         text: "Use as copy source"
+        selected_item: root.selected_item
 
 <HeaderRow>:
     height: 240
@@ -96,3 +97,25 @@
     valign: "center"
 
 <ViewSetDetailsButton>:
+
+<IndividualItemDetails>:
+    ScrollView:
+        GridLayout:
+            size_hint_y: None
+            height: sum(y.height for y in self.children)
+            cols: 1
+            BackToSetButton:
+                text: "← Back to Set View"
+                size_hint_y: None
+                text_size: self.width, None
+                height: 40
+                width: 100
+                padding_x: 10
+                padding_y: 20
+            GridLayout:
+                size_hint_y: None
+                height: sum(x.height for x in self.children)
+                cols: 1
+                id: set_details_box
+            ConfirmCopyButton:
+                text: "Copy to other items in set"

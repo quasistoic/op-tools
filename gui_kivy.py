@@ -80,6 +80,7 @@ class DuplicateSetDetails(Screen):
         header_row.add_widget(RowHeaderCell(text=""))
         for i, item in enumerate(items):
             column_header = DuplicateSetDetailsColumnHeader()
+            column_header.selected_item = item
             column_header.item_id = item.item_id
             header_row.add_widget(column_header)
         self.ids.set_details_box.add_widget(header_row)
@@ -111,9 +112,14 @@ class DuplicateSetDetails(Screen):
 
 
 class IndividualItemDetails(Screen):
-    pass
+    selected_item = ObjectProperty(None)
+
+    def on_pre_enter(self):
+        App.get_running_app().title = f"Item details for {self.selected_item.item_id}"
+
 
 class DuplicateSetDetailsColumnHeader(BoxLayout):
+    selected_item = ObjectProperty(None)
     item_id = StringProperty('')
 
 
@@ -122,11 +128,11 @@ class LabeledCheckbox(BoxLayout):
 
 
 class ArchiveCheckbox(LabeledCheckbox):
-    pass
+    selected_item = ObjectProperty(None)
 
 
 class MultiprofileCheckbox(LabeledCheckbox):
-    pass
+    selected_item = ObjectProperty(None)
 
 
 class HeaderRow(GridLayout):
@@ -145,18 +151,35 @@ class ApplyButton(Button):
     pass
 
 
-class BackButton(Button):
+class ConfirmCopyButton(Button):
+    pass
+
+
+class BackToSetButton(Button):
 
     def on_release(self):
-        app = App.get_running_app()
-        screenmanager = app.sm
+        screenmanager = App.get_running_app().sm
         screenmanager.transition.direction = 'right'
-        screenmanager.current = app.previous_screen
+        screenmanager.current = "duplicate_set_details"
 
+
+class BackToListButton(Button):
+
+    def on_release(self):
+        screenmanager = App.get_running_app().sm
+        screenmanager.transition.direction = 'right'
+        screenmanager.current = "duplicate_set_list"
 
 
 class CopyButton(Button):
-    pass
+    selected_item = ObjectProperty(None)
+
+    def on_release(self):
+        screenmanager = App.get_running_app().sm
+        details_screen = screenmanager.get_screen("individual_item_details")
+        details_screen.selected_item = self.selected_item
+        screenmanager.transition.direction = 'left'
+        screenmanager.current = "individual_item_details"
 
 
 class KivyGUI(App):
@@ -184,6 +207,8 @@ class KivyGUI(App):
         self.sm.add_widget(set_list)
         set_details = DuplicateSetDetails(name="duplicate_set_details")
         self.sm.add_widget(set_details)
+        item_details = IndividualItemDetails(name="individual_item_details")
+        self.sm.add_widget(item_details)
         return self.sm
 
     def show_item_details(self, duplicate_set, source_index):
