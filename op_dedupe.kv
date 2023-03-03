@@ -1,6 +1,14 @@
 <Label>:
     font_name: "Arial"
 
+<CheckBox>:
+    canvas.before:
+        Color:
+            rgba: 0.5, 0.5, 0.5, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
 <Screen>:
     on_pre_leave: app.previous_screen = self.name
 
