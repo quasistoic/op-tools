@@ -4,7 +4,11 @@ import argparse
 import logging
 import sys
 
-import gui_kivy
+try:
+    import gui_kivy
+    KIVY_ENABLED = True
+except ModuleNotFoundError:
+    KIVY_ENABLED = False
 import gui_tkinter
 
 GUI_TYPE = "kivy"
@@ -31,7 +35,7 @@ def main():
     if args.vault:
         vault = args.vault
 
-    if args.use_kivy:
+    if KIVY_ENABLED and args.use_kivy:
         tool = gui_kivy.KivyGUI(vault)
     else:
         tool = gui_tkinter.TkinterGUI(vault)
