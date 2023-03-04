@@ -81,7 +81,7 @@ class DuplicateSetDetails(Screen):
 
         # Add a header row with buttons/checkboxes
         header_row = HeaderRow(cols=column_count)
-        header_row.add_widget(RowHeaderCell(text=""))
+        header_row.add_widget(SetDetailsOriginCell(text=""))
         for i, item in enumerate(items):
             column_header = DuplicateSetDetailsColumnHeader()
             column_header.selected_set = self.selected_set
@@ -154,12 +154,12 @@ class LabeledCheckbox(BoxLayout):
     label_text = StringProperty('')
 
 
-class ArchiveCheckbox(LabeledCheckbox):
+class ArchiveButton(Button):
     selected_item = ObjectProperty(None)
 
 
-class MultiprofileCheckbox(LabeledCheckbox):
-    selected_item = ObjectProperty(None)
+class IgnoreSetButton(Button):
+    selected_set = ObjectProperty(None)
 
 
 class HeaderRow(GridLayout):
@@ -168,6 +168,10 @@ class HeaderRow(GridLayout):
 
 class RowHeaderCell(Label):
     pass
+
+
+class SetDetailsOriginCell(RowHeaderCell):
+    selected_set = ObjectProperty(None)
 
 
 class DataCell(Label):
