@@ -137,9 +137,17 @@
         size_hint_y: None
         text_size: self.width, None
         height: 40
-        text: "Use as copy source"
+        padding_x: 50
+        text: "Copy to others"
         selected_item: root.selected_item
         selected_set: root.selected_set
+        Image:
+            source: 'src/images/white-24dp/2x/twotone_content_copy_white_24dp.png'
+            y: self.parent.y + self.parent.height - 40
+            x: self.parent.x
+            size: 40, 40
+            allow_stretch: True
+
 
 <HeaderRow>:
     height: 240
