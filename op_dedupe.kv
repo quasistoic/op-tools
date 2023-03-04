@@ -31,13 +31,19 @@
             height: self.minimum_height
             cols: 1
             BackToListButton:
-                text: "← Back to List View"
+                text: "Back to List View"
                 size_hint_y: None
                 text_size: self.width, None
                 height: 40
                 width: 100
-                padding_x: 10
+                padding_x: 50
                 padding_y: 20
+                Image:
+                    source: 'src/images/white-24dp/2x/twotone_arrow_back_white_24dp.png'
+                    y: self.parent.y + self.parent.height - 40
+                    x: self.parent.x
+                    size: 40, 40
+                    allow_stretch: True
             GridLayout:
                 size_hint_y: None
                 height: sum(x.height for x in self.children)
@@ -114,13 +120,19 @@
             height: self.minimum_height
             cols: 1
             BackToSetButton:
-                text: "← Back to Set View"
+                text: "Back to Set View"
                 size_hint_y: None
                 text_size: self.width, None
                 height: 40
                 width: 100
-                padding_x: 10
+                padding_x: 50
                 padding_y: 20
+                Image:
+                    source: 'src/images/white-24dp/2x/twotone_arrow_back_white_24dp.png'
+                    y: self.parent.y + self.parent.height - 40
+                    x: self.parent.x
+                    size: 40, 40
+                    allow_stretch: True
             GridLayout:
                 size_hint_y: None
                 height: sum(x.height for x in self.children)

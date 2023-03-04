@@ -2,3 +2,4 @@
 .op-cache
 __pycache__
 kivy_venv
+.DS_Store
