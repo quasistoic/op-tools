@@ -109,7 +109,6 @@ class DuplicateSetDetails(Screen):
         self.populated_details = self.selected_set.get_display_name()
 
     def on_pre_enter(self):
-        App.get_running_app().title = f"Viewing Duplicate Set {self.selected_set.get_display_name()}"
         if self.populated_details == self.selected_set.get_display_name():
             return
         self.clear_set_details()
@@ -129,17 +128,16 @@ class IndividualItemDetails(Screen):
     def populate_item_details(self):
         box = self.ids.item_details_box
         for i, field_name in enumerate(self.selected_set.field_names):
-            box.add_widget(Label(text=field_name))
+            box.add_widget(RowHeaderCell(text=field_name))
             values = self.selected_item.fields.get(field_name, '')
             if isinstance(values, list):
                 values = ", ".join(values)
-            box.add_widget(Label(text=values))
+            box.add_widget(DataCell(text=values))
             var = CheckBox()
             box.add_widget(var)
         self.populated_details = self.selected_item.item_id
 
     def on_pre_enter(self):
-        App.get_running_app().title = f"Item details for {self.selected_item.item_id}"
         if self.populated_details == self.selected_item.item_id:
             return
         self.clear_item_details()

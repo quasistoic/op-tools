@@ -19,12 +19,14 @@
             text: "No duplicate items were found."
 
 <DuplicateSetList>:
+    on_pre_enter: app.title = "1Password Duplicate Manager"
     ScrollView:
         BoxLayout:
             id: set_list_box
             orientation: "vertical"
 
 <DuplicateSetDetails>:
+    on_pre_enter: app.title = "Viewing Duplicate Set " + self.selected_set.get_display_name()
     ScrollView:
         GridLayout:
             size_hint_y: None
@@ -54,7 +56,6 @@
 
 
 <LabeledCheckbox>:
-    height: 160
     orientation: "horizontal"
     Label:
         size_hint_y: None
@@ -114,6 +115,7 @@
 <ViewSetDetailsButton>:
 
 <IndividualItemDetails>:
+    on_pre_enter: app.title = "Item details for " + self.selected_item.item_id
     ScrollView:
         GridLayout:
             size_hint_y: None
