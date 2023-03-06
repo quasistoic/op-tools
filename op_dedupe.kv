@@ -41,11 +41,9 @@
     icon_source: 'src/images/white-24dp/2x/twotone_arrow_back_white_24dp.png'
     width: 100
 
-
 <CopyButton>:
     text: "Copy to others"
     icon_source: 'src/images/white-24dp/2x/twotone_content_copy_white_24dp.png'
-
 
 <Screen>:
     on_pre_leave: app.previous_screen = self.name
@@ -90,47 +88,6 @@
                 cols: 1
                 id: set_details_box
 
-
-<IndividualItemDetails>:
-    on_pre_enter: app.title = "Item details for " + self.selected_item.item_id
-    ScrollView:
-        GridLayout:
-            size_hint_y: None
-            height: self.minimum_height
-            cols: 1
-            BackToSetButton:
-                text: "Back to Set View"
-                size_hint_y: None
-                text_size: self.width, None
-                height: 40
-                width: 100
-                padding_x: 50
-                padding_y: 20
-                Image:
-                    source: 'src/images/white-24dp/2x/twotone_arrow_back_white_24dp.png'
-                    y: self.parent.y + self.parent.height - 40
-                    x: self.parent.x
-                    size: 40, 40
-                    allow_stretch: True
-            GridLayout:
-                size_hint_y: None
-                height: sum(x.height for x in self.children)
-                cols: 3
-                id: item_details_box
-            ConfirmCopyButton:
-                text: "Copy to other items in set"
-
-
-<LabeledCheckbox>:
-    orientation: "horizontal"
-    Label:
-        size_hint_y: None
-        text_size: self.width, None
-        height: self.texture_size[1]
-        text: root.label_text
-    CheckBox:
-
-
 <DuplicateSetDetailsColumnHeader>:
     orientation: "vertical"
     size_hint_y: None
@@ -145,13 +102,10 @@
         text: "Archive"
         icon_source: 'src/images/white-24dp/2x/twotone_archive_white_24dp.png'
 
-
-
 <HeaderRow>:
     height: 240
     padding_x: 10
     padding_y: 40
-
 
 <DataRow>:
     height: 240
@@ -179,13 +133,6 @@
 <SetDetailsOriginCell>:
     color: periwinkle
 
-<DataCell>:
-    height: 60
-    text_size: self.size
-    padding: [10,10]
-    valign: "center"
-
-
 <FieldDataCell>:
     orientation: "vertical"
     size_hint_y: None
@@ -199,7 +146,5 @@
     CopyButton:
         selected_item: root.selected_item
         selected_set: root.selected_set
-
-
 
 <ViewSetDetailsButton>:

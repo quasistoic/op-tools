@@ -21,8 +21,6 @@ import op_api
 NODISPLAY_FIELDS = frozenset(["updated_at"])
 LIST_SCREEN_ID = "duplicate_set_list"
 SET_DETAILS_SCREEN_ID = "duplicate_set_details"
-ITEM_DETAILS_SCREEN_ID = "individual_item_details"
-
 
 
 class DedupeManager(ScreenManager):
@@ -116,43 +114,10 @@ class DuplicateSetDetails(Screen):
         self.populate_set_details()
 
 
-class IndividualItemDetails(Screen):
-    selected_set = ObjectProperty(None)
-    selected_item = ObjectProperty(None)
-    populated_details = StringProperty()
-
-
-    def clear_item_details(self):
-        self.ids.item_details_box.clear_widgets(children=self.ids.item_details_box.children)
-        self.populated_details = ''
-
-    def populate_item_details(self):
-        box = self.ids.item_details_box
-        for i, field_name in enumerate(self.selected_set.field_names):
-            box.add_widget(RowHeaderCell(text=field_name))
-            values = self.selected_item.fields.get(field_name, '')
-            if isinstance(values, list):
-                values = ", ".join(values)
-            box.add_widget(DataCell(text=values))
-            var = CheckBox()
-            box.add_widget(var)
-        self.populated_details = self.selected_item.item_id
-
-    def on_pre_enter(self):
-        if self.populated_details == self.selected_item.item_id:
-            return
-        self.clear_item_details()
-        self.populate_item_details()
-
-
 class DuplicateSetDetailsColumnHeader(BoxLayout):
     selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
     item_id = StringProperty('')
-
-
-class LabeledCheckbox(BoxLayout):
-    label_text = StringProperty('')
 
 
 class IconButton(Button):
@@ -183,30 +148,10 @@ class SetDetailsOriginCell(RowHeaderCell):
     selected_set = ObjectProperty(None)
 
 
-class DataCell(Label):
-    pass
-
-
 class FieldDataCell(BoxLayout):
     selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
     field_data = StringProperty('')
-
-
-class ApplyButton(Button):
-    pass
-
-
-class ConfirmCopyButton(Button):
-    pass
-
-
-class BackToSetButton(Button):
-
-    def on_release(self):
-        screenmanager = App.get_running_app().sm
-        screenmanager.transition.direction = 'right'
-        screenmanager.current = SET_DETAILS_SCREEN_ID
 
 
 class BackToListButton(IconButton):
@@ -222,12 +167,8 @@ class CopyButton(IconButton):
     selected_item = ObjectProperty(None)
 
     def on_release(self):
-        screenmanager = App.get_running_app().sm
-        details_screen = screenmanager.get_screen(ITEM_DETAILS_SCREEN_ID)
-        details_screen.selected_set = self.selected_set
-        details_screen.selected_item = self.selected_item
-        screenmanager.transition.direction = 'left'
-        screenmanager.current = ITEM_DETAILS_SCREEN_ID
+        logging.warning("Copying fields from Item %s to set %s",
+            self.selected_item.item_id, self.selected_set.get_display_name())
 
 
 class KivyGUI(App):
@@ -255,7 +196,5 @@ class KivyGUI(App):
         self.sm.add_widget(set_list)
         set_details = DuplicateSetDetails(name=SET_DETAILS_SCREEN_ID)
         self.sm.add_widget(set_details)
-        item_details = IndividualItemDetails(name=ITEM_DETAILS_SCREEN_ID)
-        self.sm.add_widget(item_details)
         return self.sm
 
