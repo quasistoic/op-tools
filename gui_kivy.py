@@ -124,6 +124,15 @@ class DuplicateSetDetails(Screen):
         self.clear_set_details()
         self.populate_set_details()
 
+    def refresh(self):
+        app = App.get_running_app()
+        updated_items = []
+        for item in self.selected_set.items:
+            updated_items.append(app.op_api.get_item_details(item.item_id, force_refresh=True))
+        self.selected_set = op_api.DuplicateSet(updated_items)
+        self.clear_set_details()
+        self.populate_set_details()
+
 
 class DuplicateSetDetailsColumnHeader(BoxLayout):
     selected_set = ObjectProperty(None)
@@ -168,6 +177,12 @@ class RefreshListButton(RefreshButton):
 
 class RefreshSetButton(RefreshButton):
     selected_set = ObjectProperty(None)
+
+    def on_release(self):
+        screenmanager = App.get_running_app().sm
+        details_screen = screenmanager.get_screen(SET_DETAILS_SCREEN_ID)
+        details_screen.refresh()
+        screenmanager.current = SET_DETAILS_SCREEN_ID
 
 
 class BackToListButton(IconButton):
