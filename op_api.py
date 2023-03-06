@@ -66,10 +66,13 @@ class ItemDetails:
         return str(sorted(self.fields.items()))
 
     def is_duplicate(self, other):
-        return bool(self.get_shared_domains(other))
+        return self.has_domains() and bool(self.get_shared_domains(other))
 
     def get_shared_domains(self, other):
         return self.domains & other.domains
+
+    def has_domains(self):
+        return self.domains and self.domains != frozenset([''])
 
     def has_full_details(self):
         return ItemDetails.JSON_SOURCE == self.source
@@ -227,7 +230,7 @@ class OpApi:
                 continue
             logging.debug("Looking for duplicates of %s", item_id)
             details = self.get_item_details(item_id)
-            if details:
+            if details and details.has_domains():
                 matching_items = []
                 for j in self.item_ids[i+1:]:
                     if j in duplicate_ids:
@@ -244,6 +247,8 @@ class OpApi:
                     duplicate_set = DuplicateSet([details] + matching_items)
                     if duplicate_set.is_intentionally_multiprofile():
                         continue
+                    logging.info('DuplicateSet found: %s', duplicate_set.get_display_name())
+                    logging.info('DuplicateSet name length: %s', len(duplicate_set.get_display_name()))
                     duplicates.append(duplicate_set)
                     duplicate_ids.update(
                         [item.item_id for item in duplicate_set.items])
