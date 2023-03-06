@@ -81,7 +81,7 @@ class DuplicateSetDetails(Screen):
 
         # Add a header row with buttons/checkboxes
         header_row = HeaderRow(cols=column_count)
-        header_row.add_widget(SetDetailsOriginCell(text=""))
+        header_row.add_widget(SetDetailsOriginCell(text="Item id"))
         for i, item in enumerate(items):
             column_header = DuplicateSetDetailsColumnHeader()
             column_header.selected_set = self.selected_set

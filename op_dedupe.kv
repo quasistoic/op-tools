@@ -120,7 +120,6 @@
             ConfirmCopyButton:
                 text: "Copy to other items in set"
 
-<SetDetailsOriginCell>:
 
 <LabeledCheckbox>:
     orientation: "horizontal"
@@ -145,9 +144,6 @@
         selected_item: root.selected_item
         text: "Archive"
         icon_source: 'src/images/white-24dp/2x/twotone_archive_white_24dp.png'
-    CopyButton:
-        selected_item: root.selected_item
-        selected_set: root.selected_set
 
 
 
@@ -180,6 +176,8 @@
     color: brown
     size_hint_x: .25
 
+<SetDetailsOriginCell>:
+    color: periwinkle
 
 <DataCell>:
     height: 60
