@@ -112,8 +112,9 @@ class DuplicateSetDetails(Screen):
             row = DataRow(cols=column_count)
             row.add_widget(RowHeaderCell(text=field_name))
             row_values = [str(field_values[i][j]) for i in range(len(self.selected_set.items))]
-            for value in row_values:
-                datacell = FieldDataCell(field_data=value)
+            for i, value in enumerate(row_values):
+                datacell = FieldDataCell(field_name=field_name, field_data=value,
+                    selected_set=self.selected_set, selected_item=self.selected_set.items[i])
                 row.add_widget(datacell)
             self.ids.set_details_box.add_widget(row)
         self.populated_details = self.selected_set.get_display_name()
@@ -205,10 +206,20 @@ class BackToListButton(IconButton):
 class CopyButton(IconButton):
     selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
+    field_name = StringProperty('')
 
     def on_release(self):
-        logging.warning("Copying fields from Item %s to set %s",
+        logging.info("Copying field %s from Item %s to set %s", self.field_name,
             self.selected_item.item_id, self.selected_set.get_display_name())
+        app =App.get_running_app()
+        for target_item in self.selected_set.items:
+            if target_item.item_id == self.selected_item.item_id:
+                continue
+            app.op_api.copy_field_values(self.selected_item, target_item, [self.field_name])
+        screenmanager = App.get_running_app().sm
+        details_screen = screenmanager.get_screen(SET_DETAILS_SCREEN_ID)
+        details_screen.refresh()
+        screenmanager.current = SET_DETAILS_SCREEN_ID
 
 
 class HeaderRow(GridLayout):
@@ -230,6 +241,7 @@ class SetDetailsOriginCell(RowHeaderCell):
 class FieldDataCell(BoxLayout):
     selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
+    field_name = StringProperty('')
     field_data = StringProperty('')
 
 
