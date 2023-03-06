@@ -160,6 +160,15 @@ class ArchiveButton(IconButton):
 class IgnoreSetButton(IconButton):
     selected_set = ObjectProperty(None)
 
+    def on_release(self):
+        app = App.get_running_app()
+        app.op_api.mark_as_multiprofile(self.selected_set.items)
+
+        screenmanager = app.sm
+        list_screen = screenmanager.get_screen(LIST_SCREEN_ID)
+        list_screen.refresh()
+        screenmanager.current = LIST_SCREEN_ID
+
 
 class RefreshButton(IconButton):
     pass
