@@ -247,8 +247,6 @@ class OpApi:
                     duplicate_set = DuplicateSet([details] + matching_items)
                     if duplicate_set.is_intentionally_multiprofile():
                         continue
-                    logging.info('DuplicateSet found: %s', duplicate_set.get_display_name())
-                    logging.info('DuplicateSet name length: %s', len(duplicate_set.get_display_name()))
                     duplicates.append(duplicate_set)
                     duplicate_ids.update(
                         [item.item_id for item in duplicate_set.items])
