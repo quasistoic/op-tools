@@ -50,15 +50,26 @@ class DuplicateSetList(Screen):
     initialized = BooleanProperty(defaultvalue=False)
 
     def on_pre_enter(self):
+        self.populate_list()
+
+    def populate_list(self):
         if self.initialized:
             return
+        self.ids.set_list_box.clear_widgets(children=self.ids.set_list_box.children)
 
+        app = App.get_running_app()
+        self.sets = app.get_duplicates()
         for this_set in self.sets:
             b = ViewSetDetailsButton()
             b.selected_set = this_set
             b.text = b.get_display_text()
             self.ids.set_list_box.add_widget(b)
         self.initialized = True
+
+    def refresh(self):
+        app = App.get_running_app()
+        app.op_api.refresh_item_ids()
+        self.initialized = False
 
 
 class DuplicateSetDetails(Screen):
@@ -127,6 +138,15 @@ class IconButton(Button):
 class ArchiveButton(IconButton):
     selected_item = ObjectProperty(None)
 
+    def on_release(self):
+        app = App.get_running_app()
+        app.op_api.archive_item(self.selected_item.item_id)
+
+        screenmanager = app.sm
+        list_screen = screenmanager.get_screen(LIST_SCREEN_ID)
+        list_screen.refresh()
+        screenmanager.current = LIST_SCREEN_ID
+
 
 class IgnoreSetButton(IconButton):
     selected_set = ObjectProperty(None)
@@ -137,7 +157,13 @@ class RefreshButton(IconButton):
 
 
 class RefreshListButton(RefreshButton):
-    pass
+
+    def on_release(self):
+        screenmanager = App.get_running_app().sm
+        list_screen = screenmanager.get_screen(LIST_SCREEN_ID)
+        list_screen.refresh()
+        list_screen.populate_list()
+        screenmanager.current = LIST_SCREEN_ID
 
 
 class RefreshSetButton(RefreshButton):
@@ -195,16 +221,22 @@ class KivyGUI(App):
         self.sm = DedupeManager()
 
 
+    def get_duplicates(self):
+        duplicates = self.op_api.find_duplicates()
+        if not duplicates:
+            return []
+        return sorted(duplicates, key=lambda x: x.difference_score())
+
+
     def build(self):
         self.title = "1Password Duplicate Manager"
         Builder.load_file('op_dedupe.kv')
-        duplicates = self.op_api.find_duplicates()
+        duplicates = self.get_duplicates()
         if not duplicates:
             self.sm.add_widget(EmptySetList())
             return self.sm
 
         set_list = DuplicateSetList(name=LIST_SCREEN_ID)
-        set_list.sets = sorted(duplicates, key=lambda x: x.difference_score())
         self.sm.add_widget(set_list)
         set_details = DuplicateSetDetails(name=SET_DETAILS_SCREEN_ID)
         self.sm.add_widget(set_details)
