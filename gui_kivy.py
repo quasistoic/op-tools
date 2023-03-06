@@ -132,6 +132,35 @@ class IgnoreSetButton(IconButton):
     selected_set = ObjectProperty(None)
 
 
+class RefreshButton(IconButton):
+    pass
+
+
+class RefreshListButton(RefreshButton):
+    pass
+
+
+class RefreshSetButton(RefreshButton):
+    selected_set = ObjectProperty(None)
+
+
+class BackToListButton(IconButton):
+
+    def on_release(self):
+        screenmanager = App.get_running_app().sm
+        screenmanager.transition.direction = 'right'
+        screenmanager.current = LIST_SCREEN_ID
+
+
+class CopyButton(IconButton):
+    selected_set = ObjectProperty(None)
+    selected_item = ObjectProperty(None)
+
+    def on_release(self):
+        logging.warning("Copying fields from Item %s to set %s",
+            self.selected_item.item_id, self.selected_set.get_display_name())
+
+
 class HeaderRow(GridLayout):
     pass
 
@@ -152,23 +181,6 @@ class FieldDataCell(BoxLayout):
     selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
     field_data = StringProperty('')
-
-
-class BackToListButton(IconButton):
-
-    def on_release(self):
-        screenmanager = App.get_running_app().sm
-        screenmanager.transition.direction = 'right'
-        screenmanager.current = LIST_SCREEN_ID
-
-
-class CopyButton(IconButton):
-    selected_set = ObjectProperty(None)
-    selected_item = ObjectProperty(None)
-
-    def on_release(self):
-        logging.warning("Copying fields from Item %s to set %s",
-            self.selected_item.item_id, self.selected_set.get_display_name())
 
 
 class KivyGUI(App):

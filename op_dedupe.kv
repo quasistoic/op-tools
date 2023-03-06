@@ -45,6 +45,10 @@
     text: "Copy to others"
     icon_source: 'src/images/white-24dp/2x/twotone_content_copy_white_24dp.png'
 
+<RefreshButton>:
+    text: "Refresh"
+    icon_source: 'src/images/white-24dp/2x/twotone_refresh_white_24dp.png'
+
 <Screen>:
     on_pre_leave: app.previous_screen = self.name
     color: periwinkle
@@ -58,9 +62,17 @@
 <DuplicateSetList>:
     on_pre_enter: app.title = "1Password Duplicate Manager"
     ScrollView:
-        BoxLayout:
-            id: set_list_box
-            orientation: "vertical"
+        GridLayout:
+            cols: 1
+            GridLayout:
+                cols: 1
+                size_hint_y: None
+                height: sum(x.height for x in self.children)
+                halign: "right"
+                RefreshListButton:
+            BoxLayout:
+                id: set_list_box
+                orientation: "vertical"
 
 <DuplicateSetDetails>:
     on_pre_enter: app.title = "Viewing Duplicate Set " + self.selected_set.get_display_name()
@@ -76,12 +88,14 @@
             height: self.minimum_height
             cols: 1
             GridLayout:
-                cols: 2
+                cols: 3
                 BackToListButton:
                 IgnoreSetButton:
                     selected_set: root.selected_set
                     text: "Ignore entire set"
                     icon_source: 'src/images/white-24dp/2x/twotone_notifications_paused_white_24dp.png'
+                RefreshSetButton:
+                    selected_set: root.selected_set
             GridLayout:
                 size_hint_y: None
                 height: sum(x.height for x in self.children)
