@@ -1,16 +1,55 @@
+#:import utils kivy.utils
+#:set brown utils.get_color_from_hex('#463730')
+#:set dark_blue utils.get_color_from_hex('#1F5673')
+#:set medium_blue utils.get_color_from_hex('#759FBC')
+#:set light_blue utils.get_color_from_hex('#90C3C8')
+#:set periwinkle utils.get_color_from_hex('#B9B8D3')
+
 <Label>:
     font_name: "Arial"
+    color: periwinkle
 
 <CheckBox>:
     canvas.before:
         Color:
-            rgba: 0.5, 0.5, 0.5, 1
+            rgba: medium_blue
         Rectangle:
             pos: self.pos
             size: self.size
 
+<Button>:
+    background_color: brown
+    color: periwinkle
+
+<IconButton>:
+    size_hint_y: None
+    text_size: self.width, None
+    height: 60
+    padding_x: 55
+    padding_y: 10
+    icon_source: ''
+    text: ''
+    Image:
+        source: root.icon_source
+        y: self.parent.y + self.parent.height - self.parent.padding_y - 40
+        x: self.parent.x + 10
+        size: 40, 40
+        allow_stretch: True
+
+<BackToListButton>:
+    text: "Back to List View"
+    icon_source: 'src/images/white-24dp/2x/twotone_arrow_back_white_24dp.png'
+    width: 100
+
+
+<CopyButton>:
+    text: "Copy to others"
+    icon_source: 'src/images/white-24dp/2x/twotone_content_copy_white_24dp.png'
+
+
 <Screen>:
     on_pre_leave: app.previous_screen = self.name
+    color: periwinkle
 
 <EmptySetList>:
     BoxLayout:
@@ -29,46 +68,28 @@
     on_pre_enter: app.title = "Viewing Duplicate Set " + self.selected_set.get_display_name()
     ScrollView:
         GridLayout:
+            canvas.before:
+                Color:
+                    rgba: dark_blue
+                Rectangle:
+                    size: self.size
+                    pos: self.pos
             size_hint_y: None
             height: self.minimum_height
             cols: 1
             GridLayout:
                 cols: 2
                 BackToListButton:
-                    text: "Back to List View"
-                    size_hint_y: None
-                    text_size: self.width, None
-                    height: 40
-                    width: 100
-                    padding_x: 50
-                    padding_y: 20
-                    Image:
-                        source: 'src/images/white-24dp/2x/twotone_arrow_back_white_24dp.png'
-                        y: self.parent.y + self.parent.height - 40
-                        x: self.parent.x
-                        size: 40, 40
-                        allow_stretch: True
                 IgnoreSetButton:
                     selected_set: root.selected_set
-                    size_hint_y: None
-                    text_size: self.width, None
-                    height: 40
-                    padding_x: 50
-                    padding_y: 20
                     text: "Ignore entire set"
-                    Image:
-                        source: 'src/images/white-24dp/2x/twotone_notifications_paused_white_24dp.png'
-                        y: self.parent.y + self.parent.height - 40
-                        x: self.parent.x
-                        size: 40, 40
-                        allow_stretch: True
+                    icon_source: 'src/images/white-24dp/2x/twotone_notifications_paused_white_24dp.png'
             GridLayout:
                 size_hint_y: None
                 height: sum(x.height for x in self.children)
                 cols: 1
                 id: set_details_box
-            ApplyButton:
-                text: "Apply Changes"
+
 
 <IndividualItemDetails>:
     on_pre_enter: app.title = "Item details for " + self.selected_item.item_id
@@ -122,31 +143,12 @@
         height: 40
     ArchiveButton:
         selected_item: root.selected_item
-        size_hint_y: None
-        text_size: self.width, None
-        height: 40
-        padding_x: 50
         text: "Archive"
-        Image:
-            source: 'src/images/white-24dp/2x/twotone_archive_white_24dp.png'
-            y: self.parent.y + self.parent.height - 40
-            x: self.parent.x
-            size: 40, 40
-            allow_stretch: True
+        icon_source: 'src/images/white-24dp/2x/twotone_archive_white_24dp.png'
     CopyButton:
-        size_hint_y: None
-        text_size: self.width, None
-        height: 40
-        padding_x: 50
-        text: "Copy to others"
         selected_item: root.selected_item
         selected_set: root.selected_set
-        Image:
-            source: 'src/images/white-24dp/2x/twotone_content_copy_white_24dp.png'
-            y: self.parent.y + self.parent.height - 40
-            x: self.parent.x
-            size: 40, 40
-            allow_stretch: True
+
 
 
 <HeaderRow>:
@@ -155,12 +157,28 @@
     padding_y: 40
 
 
+<DataRow>:
+    height: 240
+    padding_x: 10
+    padding_y: 40
+    background_color: .5, .5, .5, .5
+    spacing: 10
+    color: brown
+    canvas.before:
+        Color:
+            rgba: medium_blue
+        Rectangle:
+            size: self.size
+            pos: self.pos
+
 <RowHeaderCell>:
     height: 60
     text_size: self.size
     padding: [10,10]
     halign: "right"
     valign: "center"
+    color: brown
+    size_hint_x: .25
 
 
 <DataCell>:
@@ -168,5 +186,22 @@
     text_size: self.size
     padding: [10,10]
     valign: "center"
+
+
+<FieldDataCell>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: 160
+    Label:
+        text_size: self.size
+        padding: [10,10]
+        valign: "center"
+        text: root.field_data
+        color: brown
+    CopyButton:
+        selected_item: root.selected_item
+        selected_set: root.selected_set
+
+
 
 <ViewSetDetailsButton>:

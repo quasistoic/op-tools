@@ -100,11 +100,12 @@ class DuplicateSetDetails(Screen):
                                       for item in items)
             if not row_values_vary:
                 continue
-            row = GridLayout(cols=column_count)
+            row = DataRow(cols=column_count)
             row.add_widget(RowHeaderCell(text=field_name))
             row_values = [str(field_values[i][j]) for i in range(len(self.selected_set.items))]
             for value in row_values:
-                row.add_widget(DataCell(text=value))
+                datacell = FieldDataCell(field_data=value)
+                row.add_widget(datacell)
             self.ids.set_details_box.add_widget(row)
         self.populated_details = self.selected_set.get_display_name()
 
@@ -154,15 +155,23 @@ class LabeledCheckbox(BoxLayout):
     label_text = StringProperty('')
 
 
-class ArchiveButton(Button):
+class IconButton(Button):
+    pass
+
+
+class ArchiveButton(IconButton):
     selected_item = ObjectProperty(None)
 
 
-class IgnoreSetButton(Button):
+class IgnoreSetButton(IconButton):
     selected_set = ObjectProperty(None)
 
 
 class HeaderRow(GridLayout):
+    pass
+
+
+class DataRow(GridLayout):
     pass
 
 
@@ -176,6 +185,12 @@ class SetDetailsOriginCell(RowHeaderCell):
 
 class DataCell(Label):
     pass
+
+
+class FieldDataCell(BoxLayout):
+    selected_set = ObjectProperty(None)
+    selected_item = ObjectProperty(None)
+    field_data = StringProperty('')
 
 
 class ApplyButton(Button):
@@ -194,7 +209,7 @@ class BackToSetButton(Button):
         screenmanager.current = SET_DETAILS_SCREEN_ID
 
 
-class BackToListButton(Button):
+class BackToListButton(IconButton):
 
     def on_release(self):
         screenmanager = App.get_running_app().sm
@@ -202,7 +217,7 @@ class BackToListButton(Button):
         screenmanager.current = LIST_SCREEN_ID
 
 
-class CopyButton(Button):
+class CopyButton(IconButton):
     selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
 
