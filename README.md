@@ -53,4 +53,4 @@ You can see the [full list of KIs here](https://github.com/quasistoic/op-tools/i
   * [Issue #5](https://github.com/quasistoic/op-tools/issues/5): A lot of your 1Password data ends
     up in an on-disk cache when you use this tool. I'll be building functionality into the app
     itself to delete the cache, but in the meantime, you can delete it yourself by
-    running `rm -Rf ./.op-cache` from the same directory where you've been running the tool.
+    running `rm ./.op-cache/*` from the same directory where you've been running the tool.

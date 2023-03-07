@@ -131,7 +131,7 @@ class OpApi:
         self.item_ids = [item.item_id for item in self.items]
 
     def _get_command_cache_file_name(self, command):
-        return f"{self.cache_dir}/.{self.vault}.{command}.cache"
+        return f"{self.cache_dir}/{self.vault}.{command}.cache"
 
     def clear_details_cache(self, item_id):
         self.get_item_details(item_id, force_refresh=True)
