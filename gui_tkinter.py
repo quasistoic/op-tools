@@ -91,7 +91,7 @@ class TkinterGUI:
         for item in duplicate_set.items:
             updated_items.append(self.op_api.get_item_details(item.item_id, force_refresh=True))
         frame.destroy()
-        self.display_duplicate_set(op_api.DuplicateSet(updated_items))
+        self.display_duplicate_set(op_api.DuplicateSet(updated_items, op_api=self.op_api))
 
     def display_duplicate_set(self, duplicate_set):
         """Display the selected duplicate set for management."""

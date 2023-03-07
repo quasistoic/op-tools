@@ -38,6 +38,9 @@ class ItemList:
         for i in self.items:
             yield i
 
+    def __getitem__(self, i):
+        return self.items[i]
+
     @classmethod
     def from_json(cls, serialized_json):
         raw_items = json.loads(serialized_json)
@@ -224,27 +227,27 @@ class OpApi:
     def find_duplicates(self):
         duplicates = []
         duplicate_ids = set()
-        for i, item_id in enumerate(self.item_ids):
+        for i, details in enumerate(self.items):
+            item_id = details.item_id
             if item_id in duplicate_ids:
                 logging.debug("Skipping %s because we know it's a duplicate.", item_id)
                 continue
             logging.debug("Looking for duplicates of %s", item_id)
-            details = self.get_item_details(item_id)
             if details and details.has_domains():
                 matching_items = []
-                for j in self.item_ids[i+1:]:
-                    if j in duplicate_ids:
+                for j_details in self.items[i+1:]:
+                    j_item_id = j_details.item_id
+                    if j_item_id in duplicate_ids:
                         logging.debug(
-                            "Skipping %s (inner loop) because we know it's a duplicate.", j)
+                            "Skipping %s (inner loop) because we know it's a duplicate.", j_item_id)
                         continue
-                    j_details = self.get_item_details(j)
                     if j_details.item_id == details.item_id:
                         continue
                     if not j_details.is_duplicate(details):
                         continue
                     matching_items.append(j_details)
                 if matching_items:
-                    duplicate_set = DuplicateSet([details] + matching_items)
+                    duplicate_set = DuplicateSet([details] + matching_items, op_api=self)
                     if duplicate_set.is_intentionally_multiprofile():
                         continue
                     duplicates.append(duplicate_set)
@@ -273,7 +276,7 @@ class DuplicateSet:
             return
 
         for i, item in enumerate(self.items[:]):
-            if i.has_full_details():
+            if item.has_full_details():
                 continue
             new_item = self.op_api.get_item_details(item.item_id)
             self.items[i] = new_item

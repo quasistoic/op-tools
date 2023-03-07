@@ -130,7 +130,7 @@ class DuplicateSetDetails(Screen):
         updated_items = []
         for item in self.selected_set.items:
             updated_items.append(app.op_api.get_item_details(item.item_id, force_refresh=True))
-        self.selected_set = op_api.DuplicateSet(updated_items)
+        self.selected_set = op_api.DuplicateSet(updated_items, op_api=app.op_api)
         self.clear_set_details()
         self.populate_set_details()
 
