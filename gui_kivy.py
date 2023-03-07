@@ -5,6 +5,7 @@ import logging
 
 # pylint: disable=import-error
 from kivy.app import App
+from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
@@ -20,6 +21,7 @@ import op_api
 NODISPLAY_FIELDS = frozenset(["updated_at"])
 LIST_SCREEN_ID = "duplicate_set_list"
 SET_DETAILS_SCREEN_ID = "duplicate_set_details"
+PROGRESS_SCREEN_ID = "doing_stuff"
 
 
 class DedupeManager(ScreenManager):  # pylint: disable=too-few-public-methods
@@ -29,15 +31,25 @@ class DedupeManager(ScreenManager):  # pylint: disable=too-few-public-methods
 def navigate_to_screen(screen_id, direction='right', refresh=False):
     """Refreshes data within a screen and navigates there."""
     screenmanager = App.get_running_app().manager
+    screenmanager.transition.direction = direction
+
     desired_screen = screenmanager.get_screen(screen_id)
     if refresh:
-        desired_screen.refresh()
-    screenmanager.transition.direction = direction
+        screenmanager.current = PROGRESS_SCREEN_ID
+        def refresh_and_navigate(unused_dt):
+            desired_screen.refresh()
+            screenmanager.current = screen_id
+        Clock.schedule_once(refresh_and_navigate, 0.5)
+        return
     screenmanager.current = screen_id
 
 
 class EmptySetList(Screen):  # pylint: disable=too-few-public-methods
     """Page to display when there are no duplicates to show."""
+
+
+class ProgressScreen(Screen):  # pylint: disable=too-few-public-methods
+    """Transitional screen to give the impression of progress."""
 
 
 class ViewSetDetailsButton(Button):
@@ -171,9 +183,11 @@ class ArchiveButton(IconButton):  # pylint: disable=too-few-public-methods
     selected_item = ObjectProperty(None)
 
     def on_release(self):
-        app = App.get_running_app()
-        app.op_api.archive_item(self.selected_item.item_id)
-        navigate_to_screen(LIST_SCREEN_ID, direction='right', refresh=True)
+        navigate_to_screen(PROGRESS_SCREEN_ID, direction='right')
+        def archive_and_navigate(unused_dt):
+            App.get_running_app().op_api.archive_item(self.selected_item.item_id)
+            navigate_to_screen(LIST_SCREEN_ID, direction='right', refresh=True)
+        Clock.schedule_once(archive_and_navigate, 0.5)
 
 
 class IgnoreSetButton(IconButton):  # pylint: disable=too-few-public-methods
@@ -181,9 +195,11 @@ class IgnoreSetButton(IconButton):  # pylint: disable=too-few-public-methods
     selected_set = ObjectProperty(None)
 
     def on_release(self):
-        app = App.get_running_app()
-        app.op_api.mark_as_multiprofile(self.selected_set.items)
-        navigate_to_screen(LIST_SCREEN_ID, direction='right', refresh=True)
+        navigate_to_screen(PROGRESS_SCREEN_ID, direction='right')
+        def ignore_and_navigate(unused_dt):
+            App.get_running_app().op_api.mark_as_multiprofile(self.selected_set.items)
+            navigate_to_screen(LIST_SCREEN_ID, direction='right', refresh=True)
+        Clock.schedule_once(ignore_and_navigate, 0.5)
 
 
 class RefreshButton(IconButton):  # pylint: disable=too-few-public-methods
@@ -225,12 +241,15 @@ class CopyButton(IconButton):
     def on_release(self):
         logging.info("Copying field %s from Item %s to set %s", self.field_name,
             self.selected_item.item_id, self.selected_set.get_display_name())
-        app =App.get_running_app()
-        for target_item in self.selected_set.items:
-            if target_item.item_id == self.selected_item.item_id:
-                continue
-            app.op_api.copy_field_values(self.selected_item, target_item, [self.field_name])
-        navigate_to_screen(SET_DETAILS_SCREEN_ID, direction='up', refresh=True)
+        navigate_to_screen(PROGRESS_SCREEN_ID, direction='up')
+        def copy_and_navigate(unused_dt):
+            app =App.get_running_app()
+            for target_item in self.selected_set.items:
+                if target_item.item_id == self.selected_item.item_id:
+                    continue
+                app.op_api.copy_field_values(self.selected_item, target_item, [self.field_name])
+            navigate_to_screen(SET_DETAILS_SCREEN_ID, direction='up', refresh=True)
+        Clock.schedule_once(copy_and_navigate, 0.5)
 
 
 class HeaderRow(GridLayout):  # pylint: disable=too-few-public-methods
@@ -286,8 +305,7 @@ class KivyGUI(App):
             self.manager.add_widget(EmptySetList())
             return self.manager
 
-        set_list = DuplicateSetList(name=LIST_SCREEN_ID)
-        self.manager.add_widget(set_list)
-        set_details = DuplicateSetDetails(name=SET_DETAILS_SCREEN_ID)
-        self.manager.add_widget(set_details)
+        self.manager.add_widget(DuplicateSetList(name=LIST_SCREEN_ID))
+        self.manager.add_widget(DuplicateSetDetails(name=SET_DETAILS_SCREEN_ID))
+        self.manager.add_widget(ProgressScreen(name=PROGRESS_SCREEN_ID))
         return self.manager
