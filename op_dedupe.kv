@@ -165,5 +165,7 @@
         selected_item: root.selected_item
         selected_set: root.selected_set
         field_name: root.field_name
+        opacity: 0 if root.for_display_only else 1
+        disabled: root.for_display_only
 
 <ViewSetDetailsButton>:

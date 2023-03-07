@@ -10,7 +10,7 @@ from functools import cached_property
 from urllib.parse import urlparse
 
 MULTIPROFILE_TAG = "multiprofile"
-
+UNIMPLEMENTED_FIELDS = frozenset(["vault"])
 
 def get_domain_from_url(url):
     """Return the domain of a URL.
@@ -194,9 +194,14 @@ class OpApi:
         item_id = item_details.item_id
         for field_name, values in fields.items():
             if field_name == "urls":
+                logging.warning("Only copying over the first URL: %s", values[0])
                 command = f'item edit {item_id} --url "{values[0]}"'
-            elif field_name in ["tags"]:
-                logging.warning("Copying %s is currently unimplemented.", field_name)
+            elif field_name == "tags":
+                for value in values:
+                    self.add_tag(item_details, value)
+                continue
+            elif field_name in UNIMPLEMENTED_FIELDS:
+                logging.warning("Copying %s is currently unimplemented. Sorry.", field_name)
                 continue
             elif values == "":
                 command = f'item edit {item_id} {field_name}[delete]'

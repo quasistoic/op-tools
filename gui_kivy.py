@@ -114,7 +114,8 @@ class DuplicateSetDetails(Screen):
             row_values = [str(field_values[i][j]) for i in range(len(self.selected_set.items))]
             for i, value in enumerate(row_values):
                 datacell = FieldDataCell(field_name=field_name, field_data=value,
-                    selected_set=self.selected_set, selected_item=self.selected_set.items[i])
+                    selected_set=self.selected_set, selected_item=self.selected_set.items[i],
+                    for_display_only=bool(field_name in op_api.UNIMPLEMENTED_FIELDS))
                 row.add_widget(datacell)
             self.ids.set_details_box.add_widget(row)
         self.populated_details = self.selected_set.get_display_name()
@@ -243,6 +244,7 @@ class FieldDataCell(BoxLayout):
     selected_item = ObjectProperty(None)
     field_name = StringProperty('')
     field_data = StringProperty('')
+    for_display_only = BooleanProperty(False)
 
 
 class KivyGUI(App):
