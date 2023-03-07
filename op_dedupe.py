@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""1Password Deduplication Manager."""
+
 import argparse
 import logging
 import sys

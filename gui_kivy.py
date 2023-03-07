@@ -1,19 +1,18 @@
-import logging
-from functools import partial
+"""Implementation of a Kivy-based GUI for the 1Password Deduplication Manager."""
 
+
+import logging
+
+# pylint: disable=import-error
 from kivy.app import App
-from kivy.core.window import Window
 from kivy.lang.builder import Builder
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
-from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.checkbox import CheckBox
-from kivy.uix.popup import Popup
-from kivy.uix.widget import Widget
-from kivy.properties import ListProperty, ObjectProperty, StringProperty, BooleanProperty
+from kivy.properties import ObjectProperty, StringProperty, BooleanProperty
 from kivy.uix.screenmanager import ScreenManager, Screen
+# pylint: enable=import-error
 
 import op_api
 
@@ -23,29 +22,45 @@ LIST_SCREEN_ID = "duplicate_set_list"
 SET_DETAILS_SCREEN_ID = "duplicate_set_details"
 
 
-class DedupeManager(ScreenManager):
-    pass
+class DedupeManager(ScreenManager):  # pylint: disable=too-few-public-methods
+    """Deduplication Screen Manager."""
 
 
-class EmptySetList(Screen):
-    pass
+
+def navigate_to_screen(screen_id, direction='right', refresh=False):
+    """Refreshes data within a screen and navigates there."""
+    screenmanager = App.get_running_app().manager
+    desired_screen = screenmanager.get_screen(screen_id)
+    if refresh:
+        desired_screen.refresh()
+    screenmanager.transition.direction = direction
+    screenmanager.current = screen_id
+
+
+class EmptySetList(Screen):  # pylint: disable=too-few-public-methods
+    """Page to display when there are no duplicates to show."""
 
 
 class ViewSetDetailsButton(Button):
+    """Button that, when clicked, navigates to a duplicate set details page."""
     selected_set = ObjectProperty(None)
 
     def on_release(self):
-        screenmanager = App.get_running_app().sm
+        screenmanager = App.get_running_app().manager
         details_screen = screenmanager.get_screen(SET_DETAILS_SCREEN_ID)
         details_screen.selected_set = self.selected_set
         screenmanager.transition.direction = 'left'
         screenmanager.current = SET_DETAILS_SCREEN_ID
 
     def get_display_text(self):
-        return f"{self.selected_set.get_display_name()} (Score: {self.selected_set.difference_score()})"
+        return "{name} (Score: {score})".format(
+            name=self.selected_set.get_display_name(),
+            score=self.selected_set.difference_score())
 
 
 class DuplicateSetList(Screen):
+    """Page showing the list of all duplicate sets."""
+
     sets = ObjectProperty(None)
     initialized = BooleanProperty(defaultvalue=False)
 
@@ -60,20 +75,21 @@ class DuplicateSetList(Screen):
         app = App.get_running_app()
         self.sets = app.get_duplicates()
         for this_set in self.sets:
-            b = ViewSetDetailsButton()
-            b.selected_set = this_set
-            b.text = b.get_display_text()
-            self.ids.set_list_box.add_widget(b)
+            button = ViewSetDetailsButton()
+            button.selected_set = this_set
+            button.text = button.get_display_text()  # pylint: disable=attribute-defined-outside-init
+            self.ids.set_list_box.add_widget(button)
         self.initialized = True
 
     def refresh(self):
         app = App.get_running_app()
         app.op_api.refresh_item_ids()
         self.initialized = False
+        self.populate_list()
 
 
 class DuplicateSetDetails(Screen):
-    # TODO: Make the buttons work.
+    """Page showing the details of a particular duplicate set."""
 
     selected_set = ObjectProperty(None)
     populated_details = StringProperty()
@@ -81,6 +97,13 @@ class DuplicateSetDetails(Screen):
     def clear_set_details(self):
         self.ids.set_details_box.clear_widgets(children=self.ids.set_details_box.children)
         self.populated_details = ''
+
+    def build_column_header(self, item):
+        column_header = DuplicateSetDetailsColumnHeader()
+        column_header.selected_set = self.selected_set
+        column_header.selected_item = item
+        column_header.item_id = item.item_id
+        return column_header
 
     def populate_set_details(self):
         items = self.selected_set.items
@@ -92,11 +115,7 @@ class DuplicateSetDetails(Screen):
         header_row = HeaderRow(cols=column_count)
         header_row.add_widget(SetDetailsOriginCell(text="Item id"))
         for i, item in enumerate(items):
-            column_header = DuplicateSetDetailsColumnHeader()
-            column_header.selected_set = self.selected_set
-            column_header.selected_item = item
-            column_header.item_id = item.item_id
-            header_row.add_widget(column_header)
+            header_row.add_widget(self.build_column_header(item))
         self.ids.set_details_box.add_widget(header_row)
 
         # Add the data rows with field values
@@ -130,81 +149,76 @@ class DuplicateSetDetails(Screen):
         app = App.get_running_app()
         updated_items = []
         for item in self.selected_set.items:
-            updated_items.append(app.op_api.get_item_details(item.item_id, force_refresh=True))
+            updated_items.append(
+                app.op_api.get_item_details(item.item_id, force_refresh=True))
         self.selected_set = op_api.DuplicateSet(updated_items, op_api=app.op_api)
         self.clear_set_details()
         self.populate_set_details()
 
 
-class DuplicateSetDetailsColumnHeader(BoxLayout):
+class DuplicateSetDetailsColumnHeader(BoxLayout):  # pylint: disable=too-few-public-methods
+    """Column header on a duplicate set details page (one item per column)."""
     selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
     item_id = StringProperty('')
 
 
-class IconButton(Button):
-    pass
+class IconButton(Button):  # pylint: disable=too-few-public-methods
+    """A button containing both an icon and a label."""
 
 
-class ArchiveButton(IconButton):
+class ArchiveButton(IconButton):  # pylint: disable=too-few-public-methods
+    """A button that, when pressed, archives a 1Password item."""
     selected_item = ObjectProperty(None)
 
     def on_release(self):
         app = App.get_running_app()
         app.op_api.archive_item(self.selected_item.item_id)
-
-        screenmanager = app.sm
-        list_screen = screenmanager.get_screen(LIST_SCREEN_ID)
-        list_screen.refresh()
-        screenmanager.current = LIST_SCREEN_ID
+        navigate_to_screen(LIST_SCREEN_ID, direction='right', refresh=True)
 
 
-class IgnoreSetButton(IconButton):
+class IgnoreSetButton(IconButton):  # pylint: disable=too-few-public-methods
+    """A button that marks the items in a duplicate set as ignorable by this program."""
     selected_set = ObjectProperty(None)
 
     def on_release(self):
         app = App.get_running_app()
         app.op_api.mark_as_multiprofile(self.selected_set.items)
-
-        screenmanager = app.sm
-        list_screen = screenmanager.get_screen(LIST_SCREEN_ID)
-        list_screen.refresh()
-        screenmanager.current = LIST_SCREEN_ID
+        navigate_to_screen(LIST_SCREEN_ID, direction='right', refresh=True)
 
 
-class RefreshButton(IconButton):
-    pass
+class RefreshButton(IconButton):  # pylint: disable=too-few-public-methods
+    """An abstract button that can refresh something."""
 
 
-class RefreshListButton(RefreshButton):
+class RefreshListButton(RefreshButton):  # pylint: disable=too-few-public-methods
+    """A button that refreshes the list view."""
 
     def on_release(self):
-        screenmanager = App.get_running_app().sm
-        list_screen = screenmanager.get_screen(LIST_SCREEN_ID)
-        list_screen.refresh()
-        list_screen.populate_list()
-        screenmanager.current = LIST_SCREEN_ID
+        # pylint: disable=no-self-use
+        navigate_to_screen(LIST_SCREEN_ID, direction='up', refresh=True)
 
 
-class RefreshSetButton(RefreshButton):
+class RefreshSetButton(RefreshButton):  # pylint: disable=too-few-public-methods
+    """A button that refreshes the duplicate set details page."""
     selected_set = ObjectProperty(None)
 
     def on_release(self):
-        screenmanager = App.get_running_app().sm
-        details_screen = screenmanager.get_screen(SET_DETAILS_SCREEN_ID)
-        details_screen.refresh()
-        screenmanager.current = SET_DETAILS_SCREEN_ID
+        # pylint: disable=no-self-use
+        navigate_to_screen(SET_DETAILS_SCREEN_ID, direction='up', refresh=True)
 
 
-class BackToListButton(IconButton):
+class BackToListButton(IconButton):  # pylint: disable=too-few-public-methods
+    """A button for navigating back to the list view."""
 
     def on_release(self):
-        screenmanager = App.get_running_app().sm
-        screenmanager.transition.direction = 'right'
-        screenmanager.current = LIST_SCREEN_ID
+        # pylint: disable=no-self-use
+        navigate_to_screen(LIST_SCREEN_ID, direction='right', refresh=False)
 
 
 class CopyButton(IconButton):
+    """A button that copies the value of a field from one 1Password item to another."""
+    # pylint: disable=too-few-public-methods
     selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
     field_name = StringProperty('')
@@ -217,29 +231,28 @@ class CopyButton(IconButton):
             if target_item.item_id == self.selected_item.item_id:
                 continue
             app.op_api.copy_field_values(self.selected_item, target_item, [self.field_name])
-        screenmanager = App.get_running_app().sm
-        details_screen = screenmanager.get_screen(SET_DETAILS_SCREEN_ID)
-        details_screen.refresh()
-        screenmanager.current = SET_DETAILS_SCREEN_ID
+        navigate_to_screen(SET_DETAILS_SCREEN_ID, direction='up', refresh=True)
 
 
-class HeaderRow(GridLayout):
-    pass
+class HeaderRow(GridLayout):  # pylint: disable=too-few-public-methods
+    """A generic header row container for layout."""
 
 
-class DataRow(GridLayout):
-    pass
+class DataRow(GridLayout):  # pylint: disable=too-few-public-methods
+    """A generic data row container for layout."""
 
 
-class RowHeaderCell(Label):
-    pass
+class RowHeaderCell(Label):  # pylint: disable=too-few-public-methods
+    """A generic header cell container for layout."""
 
 
-class SetDetailsOriginCell(RowHeaderCell):
+class SetDetailsOriginCell(RowHeaderCell):  # pylint: disable=too-few-public-methods
+    """The upper-left cell on a duplicate set details page."""
     selected_set = ObjectProperty(None)
 
 
-class FieldDataCell(BoxLayout):
+class FieldDataCell(BoxLayout):  # pylint: disable=too-few-public-methods
+    """A data cell on a duplicate set details page."""
     selected_set = ObjectProperty(None)
     selected_item = ObjectProperty(None)
     field_name = StringProperty('')
@@ -256,7 +269,8 @@ class KivyGUI(App):
         self.infocus_duplicate_set = None
         self.copy_vars = []
         self.details_window = None
-        self.sm = DedupeManager()
+        self.manager = DedupeManager()
+        self.title = "1Password Duplicate Manager"
 
 
     def get_duplicates(self):
@@ -267,16 +281,14 @@ class KivyGUI(App):
 
 
     def build(self):
-        self.title = "1Password Duplicate Manager"
         Builder.load_file('op_dedupe.kv')
         duplicates = self.get_duplicates()
         if not duplicates:
-            self.sm.add_widget(EmptySetList())
-            return self.sm
+            self.manager.add_widget(EmptySetList())
+            return self.manager
 
         set_list = DuplicateSetList(name=LIST_SCREEN_ID)
-        self.sm.add_widget(set_list)
+        self.manager.add_widget(set_list)
         set_details = DuplicateSetDetails(name=SET_DETAILS_SCREEN_ID)
-        self.sm.add_widget(set_details)
-        return self.sm
-
+        self.manager.add_widget(set_details)
+        return self.manager
