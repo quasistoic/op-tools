@@ -26,7 +26,6 @@ class DedupeManager(ScreenManager):  # pylint: disable=too-few-public-methods
     """Deduplication Screen Manager."""
 
 
-
 def navigate_to_screen(screen_id, direction='right', refresh=False):
     """Refreshes data within a screen and navigates there."""
     screenmanager = App.get_running_app().manager
