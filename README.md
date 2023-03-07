@@ -9,13 +9,18 @@ the 1Password desktop app.
 
 # Usage
 
-Examples:
-  * `./op_dedupe.py`
-  * `./op_dedupe.py -- --use_kivy`
+App will use the Kivy GUI by default if available in the evironment, otherwise
+will fall back to the Tkinter GUI. I don't recommend the Tkinter GUI, and it's
+not likely to get a lot of love going forward.
+
+```
+source kivy_venv/bin/activate
+./op_dedupe.py
+```
 
 # Development
 
-## Initial installation
+# Initial installation
 
 ```
 python3 -m pip install --upgrade pip setuptools virtualenv

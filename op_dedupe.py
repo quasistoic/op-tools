@@ -11,14 +11,12 @@ except ModuleNotFoundError:
     KIVY_ENABLED = False
 import gui_tkinter
 
-GUI_TYPE = "kivy"
-
 
 def init_argparse():
     parser = argparse.ArgumentParser(
         description='Find and manage duplicate items in 1Password.')
     parser.add_argument('--vault', type=str, help='Act only on this vault.')
-    parser.add_argument('--use_kivy', action='store_true', default=False,
+    parser.add_argument('--use_kivy', action='store_true', default=True,
         help='Use the alpha Kivy GUI library instead of Tkinter')
     return parser
 
