@@ -150,7 +150,7 @@ class OpApi:
             op_command += f" --vault {self.vault}"
         logging.info("Calling API: %s", op_command)
         output = os.popen(op_command).read()
-        if cacheable:
+        if output and cacheable:
             with open(cache_file, "wb") as cache:
                 pickle.dump(output, cache)
         return output
