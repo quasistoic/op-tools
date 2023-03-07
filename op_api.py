@@ -28,6 +28,9 @@ def get_domain_from_url(url):
     return domain
 
 
+def get_domains_from_urls(url_list):
+    return {get_domain_from_url(url) for url in url_list if get_domain_from_url(url)}
+
 class ItemList:
     """A list of 1Password items."""
 
@@ -98,9 +101,8 @@ class ItemDetails:
                     fields[field["label"]] = field["value"]
                 else:
                     fields[field["id"]] = field["value"]
-        domains = {get_domain_from_url(url) for url in fields["urls"]}
         return cls(item_id, fields=fields, source=cls.JSON_SOURCE,
-            serialized=serialized_json, domains=domains)
+            serialized=serialized_json, domains=get_domains_from_urls(fields["urls"]))
 
     @classmethod
     def from_list(cls, details):
@@ -113,9 +115,8 @@ class ItemDetails:
             "category": details["category"],
             "updated_at": details["updated_at"]
         }
-        domains = {get_domain_from_url(url) for url in fields["urls"]}
         return cls(item_id, fields=fields, source=cls.JSON_LIST_SOURCE,
-            domains=domains)
+            domains=get_domains_from_urls(fields["urls"]))
 
 
 class OpApi:
