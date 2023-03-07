@@ -188,7 +188,7 @@ class OpApi:
         for other_tag in all_tags[1:]:
             command += f',"{other_tag}"'
         self.run_command(command, cacheable=False)
-        self.get_item_details(item_id, force_refresh=True)
+        return self.get_item_details(item_id, force_refresh=True)
 
     def update_item(self, item_details, fields):
         item_id = item_details.item_id
@@ -198,7 +198,7 @@ class OpApi:
                 command = f'item edit {item_id} --url "{values[0]}"'
             elif field_name == "tags":
                 for value in values:
-                    self.add_tag(item_details, value)
+                    item_details = self.add_tag(item_details, value)
                 continue
             elif field_name in UNIMPLEMENTED_FIELDS:
                 logging.warning("Copying %s is currently unimplemented. Sorry.", field_name)

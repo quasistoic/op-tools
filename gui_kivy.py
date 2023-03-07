@@ -243,7 +243,7 @@ class CopyButton(IconButton):
             self.selected_item.item_id, self.selected_set.get_display_name())
         navigate_to_screen(PROGRESS_SCREEN_ID, direction='up')
         def copy_and_navigate(unused_dt):
-            app =App.get_running_app()
+            app = App.get_running_app()
             for target_item in self.selected_set.items:
                 if target_item.item_id == self.selected_item.item_id:
                     continue
