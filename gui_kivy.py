@@ -59,7 +59,8 @@ class ProgressScreen(Screen):  # pylint: disable=too-few-public-methods
 class InitialLoadScreen(Screen):  # pylint: disable=too-few-public-methods
     """Transitional screen during initial data fetch."""
 
-    def on_enter(self):
+    def on_enter(self):  # pylint: disable=no-self-use
+        """Asynchronously fetches data when the load screen displays."""
         def async_load(unused_dt):
             duplicates = App.get_running_app().get_duplicates()
             if duplicates:
@@ -74,6 +75,7 @@ class ViewSetDetailsButton(Button):
     selected_set = ObjectProperty(None)
 
     def on_release(self):
+        """Handles button click."""
         screenmanager = App.get_running_app().manager
         details_screen = screenmanager.get_screen(SET_DETAILS_SCREEN_ID)
         details_screen.selected_set = self.selected_set
@@ -82,6 +84,7 @@ class ViewSetDetailsButton(Button):
         screenmanager.current = SET_DETAILS_SCREEN_ID
 
     def get_display_text(self):
+        """Returns the button text for viewing a duplicate set."""
         return "{name} (Score: {score})".format(
             name=self.selected_set.get_display_name(),
             score=self.selected_set.difference_score())
@@ -94,9 +97,11 @@ class DuplicateSetList(Screen):
     initialized = BooleanProperty(defaultvalue=False)
 
     def on_pre_enter(self):
+        """Runs every time the screen loads."""
         self.populate_list()
 
     def populate_list(self):
+        """Initializes and populates data within the set list screen."""
         if self.initialized:
             return
         self.ids.set_list_box.clear_widgets(children=self.ids.set_list_box.children)
@@ -111,6 +116,7 @@ class DuplicateSetList(Screen):
         self.initialized = True
 
     def refresh(self):
+        """Refreshes the duplicate set list screen with new data, bypassing cache."""
         app = App.get_running_app()
         app.op_api.refresh_item_ids()
         self.initialized = False
@@ -124,10 +130,12 @@ class DuplicateSetDetails(Screen):
     populated_details = StringProperty()
 
     def clear_set_details(self):
+        """Removes all fields data from the screen in preparation for reload."""
         self.ids.set_details_box.clear_widgets(children=self.ids.set_details_box.children)
         self.populated_details = ''
 
     def build_column_header(self, item):
+        """Builds the column header for a single item column."""
         column_header = DuplicateSetDetailsColumnHeader()
         column_header.selected_set = self.selected_set
         column_header.selected_item = item
@@ -135,6 +143,7 @@ class DuplicateSetDetails(Screen):
         return column_header
 
     def populate_set_details(self):
+        """Populates the screen with data about the items in the duplicate set."""
         items = self.selected_set.items
         column_count = len(items) + 1
         logging.info("Looking for %s columns", column_count)
@@ -169,12 +178,14 @@ class DuplicateSetDetails(Screen):
         self.populated_details = self.selected_set.get_display_name()
 
     def on_pre_enter(self):
+        """Runs every time the screen loads."""
         if self.populated_details == self.selected_set.get_display_name():
             return
         self.clear_set_details()
         self.populate_set_details()
 
     def refresh(self):
+        """Refreshes the data on the page."""
         app = App.get_running_app()
         updated_items = []
         for item in self.selected_set.items:
@@ -201,6 +212,7 @@ class ArchiveButton(IconButton):  # pylint: disable=too-few-public-methods
     selected_item = ObjectProperty(None)
 
     def on_release(self):
+        """Handles button click."""
         navigate_to_screen(PROGRESS_SCREEN_ID, direction='right')
         def archive_and_navigate(unused_dt):
             App.get_running_app().op_api.archive_item(self.selected_item.item_id)
@@ -213,6 +225,7 @@ class IgnoreSetButton(IconButton):  # pylint: disable=too-few-public-methods
     selected_set = ObjectProperty(None)
 
     def on_release(self):
+        """Handles button click."""
         navigate_to_screen(PROGRESS_SCREEN_ID, direction='right')
         def ignore_and_navigate(unused_dt):
             App.get_running_app().op_api.mark_as_multiprofile(self.selected_set.items)
@@ -227,8 +240,8 @@ class RefreshButton(IconButton):  # pylint: disable=too-few-public-methods
 class RefreshListButton(RefreshButton):  # pylint: disable=too-few-public-methods
     """A button that refreshes the list view."""
 
-    def on_release(self):
-        # pylint: disable=no-self-use
+    def on_release(self):  # pylint: disable=no-self-use
+        """Handles button click."""
         navigate_to_screen(LIST_SCREEN_ID, direction='up', refresh=True)
 
 
@@ -236,34 +249,34 @@ class RefreshSetButton(RefreshButton):  # pylint: disable=too-few-public-methods
     """A button that refreshes the duplicate set details page."""
     selected_set = ObjectProperty(None)
 
-    def on_release(self):
-        # pylint: disable=no-self-use
+    def on_release(self):  # pylint: disable=no-self-use
+        """Handles button click."""
         navigate_to_screen(SET_DETAILS_SCREEN_ID, direction='up', refresh=True)
 
 
-class EmptyCacheButton(IconButton):
+class EmptyCacheButton(IconButton):  # pylint: disable=too-few-public-methods
     """A button to clear the on-disk cache."""
 
-    def on_release(self):
-        # pylint: disable=no-self-use
+    def on_release(self):  # pylint: disable=no-self-use
+        """Handles button click."""
         App.get_running_app().op_api.clear_entire_cache()
 
 
-class OpenLinkButton(IconButton):
+class OpenLinkButton(IconButton):  # pylint: disable=too-few-public-methods
     """A button to open a link in a web browser."""
     selected_item = ObjectProperty(None)
 
     def on_release(self):
-        # pylint: disable=no-self-use
+        """Handles button click."""
         webbrowser.open_new_tab(self.selected_item.fields['urls'][0])
 
 
-class OpenInOpButton(IconButton):
+class OpenInOpButton(IconButton):  # pylint: disable=too-few-public-methods
     """A button to open an item in the 1Password UI."""
     selected_item = ObjectProperty(None)
 
     def on_release(self):
-        # pylint: disable=no-self-use
+        """Handles button click."""
         deeplink = self.selected_item.get_app_deeplink()
         logging.info("Deeplink: %s", deeplink)
         webbrowser.open_new_tab(deeplink)
@@ -272,12 +285,12 @@ class OpenInOpButton(IconButton):
 class BackToListButton(IconButton):  # pylint: disable=too-few-public-methods
     """A button for navigating back to the list view."""
 
-    def on_release(self):
-        # pylint: disable=no-self-use
+    def on_release(self):  # pylint: disable=no-self-use
+        """Handles button click."""
         navigate_to_screen(LIST_SCREEN_ID, direction='right', refresh=False)
 
 
-class CopyButton(IconButton):
+class CopyButton(IconButton):  # pylint: disable=too-few-public-methods
     """A button that copies the value of a field from one 1Password item to another."""
     # pylint: disable=too-few-public-methods
     selected_set = ObjectProperty(None)
@@ -285,6 +298,7 @@ class CopyButton(IconButton):
     field_name = StringProperty('')
 
     def on_release(self):
+        """Handles button click."""
         logging.info("Copying field %s from Item %s to set %s", self.field_name,
             self.selected_item.item_id, self.selected_set.get_display_name())
         navigate_to_screen(PROGRESS_SCREEN_ID, direction='up')
@@ -334,12 +348,14 @@ class KivyGUI(App):
         self.title = "1Password Duplicate Manager"
 
     def get_duplicates(self):
+        """Fetches and sorts the list of DuplicateSets for the account."""
         duplicates = self.op_api.find_duplicates()
         if not duplicates:
             return []
         return sorted(duplicates, key=lambda x: x.difference_score())
 
     def build(self):
+        """Builds the initial set of app screens."""
         Builder.load_file('op_dedupe.kv')
         self.manager.add_widget(InitialLoadScreen(name=INITIAL_LOAD_SCREEN_ID))
         self.manager.add_widget(ProgressScreen(name=PROGRESS_SCREEN_ID))

@@ -91,7 +91,8 @@ class ItemDetails:
         parsed = urlparse(self.get_deeplink())
         params = parse_qs(parsed.query)
         return 'onepassword://open/i?a={account}&v={vault}&i={item}&h={host}'.format(
-            account=params['a'][0], host=params['h'][0], item=params['i'][0], vault=params['v'][0])
+            account=params['a'][0], host=params['h'][0], item=params['i'][0],
+            vault=params['v'][0])
 
     def get_deeplink(self):
         return self.op_api.get_item_deeplink(self.item_id)
