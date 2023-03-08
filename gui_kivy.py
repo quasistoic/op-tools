@@ -1,6 +1,7 @@
 """Implementation of a Kivy-based GUI for the 1Password Deduplication Manager."""
 
 
+import concurrent.futures
 import logging
 import webbrowser
 
@@ -352,6 +353,11 @@ class KivyGUI(App):
         duplicates = self.op_api.find_duplicates()
         if not duplicates:
             return []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+            for dup_set in duplicates:
+                if dup_set.has_full_details():
+                    continue
+                future = executor.submit(dup_set.force_full_details)
         return sorted(duplicates, key=lambda x: x.difference_score())
 
     def build(self):
