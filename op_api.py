@@ -84,13 +84,14 @@ class ItemDetails:
     JSON_LIST_SOURCE = "list_skeleton"
 
     def __init__(self, item_id, fields=(), source=None,
-            serialized=None, domains=frozenset([]), op_api=None):
+            serialized=None, domains=frozenset([]), op_api=None, vault_id=None):
         self.item_id = item_id
         self.serialized = serialized
         self.source = source
         self.fields = fields
         self.domains = domains
         self.op_api = op_api
+        self.vault_id = vault_id
 
     def __str__(self):
         return str(sorted(self.fields.items()))
@@ -138,7 +139,7 @@ class ItemDetails:
                     fields[field["id"]] = field["value"]
         return cls(item_id, fields=fields, source=cls.JSON_SOURCE,
             serialized=serialized_json, domains=get_domains_from_urls(fields["urls"]),
-            op_api=op_api)
+            op_api=op_api, vault_id=details["vault"]["id"])
 
     @classmethod
     def from_list(cls, details, op_api=None):
@@ -152,7 +153,8 @@ class ItemDetails:
             "updated_at": details["updated_at"]
         }
         return cls(item_id, fields=fields, source=cls.JSON_LIST_SOURCE,
-            domains=get_domains_from_urls(fields["urls"]), op_api=op_api)
+            domains=get_domains_from_urls(fields["urls"]), op_api=op_api,
+            vault_id=details["vault"]["id"])
 
 
 class OpApi:
@@ -180,7 +182,7 @@ class OpApi:
     def clear_details_cache(self, item_id):
         self.get_item_details(item_id, force_refresh=True)
 
-    def run_command(self, command, skip_cache=False, cacheable=True):
+    def run_command(self, command, skip_cache=False, cacheable=True, vault_id=None):
         cache_file = self._get_command_cache_file_name(command)
         if cacheable and not skip_cache:
             if os.path.exists(cache_file):
@@ -191,7 +193,9 @@ class OpApi:
         op_command = f"op {command}"
         if not skip_cache:
             op_command += " --cache"
-        if self.vault:
+        if vault_id:
+            op_command += f" --vault {vault_id}"
+        elif self.vault:
             op_command += f" --vault {self.vault}"
         logging.info("Calling API: %s", op_command)
         next(self.api_rate_limiter)
@@ -211,9 +215,9 @@ class OpApi:
         item_list = ItemList.from_json(output, op_api=self)
         return item_list
 
-    def get_item_details(self, item_id, force_refresh=False):
+    def get_item_details(self, item_id, force_refresh=False, vault_id=None):
         output = self.run_command(f"item get {item_id} --format=json",
-            skip_cache=force_refresh)
+            skip_cache=force_refresh, vault_id=vault_id)
         try:
             item = ItemDetails.from_json(output, op_api=self)
         except json.decoder.JSONDecodeError:
@@ -344,7 +348,7 @@ class DuplicateSet:
         for i, item in enumerate(self.items[:]):
             if item.has_full_details():
                 continue
-            new_item = self.op_api.get_item_details(item.item_id)
+            new_item = self.op_api.get_item_details(item.item_id, vault_id=item.vault_id)
             self.items[i] = new_item
 
     @cached_property
