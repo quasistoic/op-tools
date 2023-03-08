@@ -68,7 +68,7 @@ class InitialLoadScreen(Screen):  # pylint: disable=too-few-public-methods
                 navigate_to_screen(LIST_SCREEN_ID, direction='up', refresh=False)
             else:
                 navigate_to_screen(EMPTY_SET_ID, direction='up', refresh=False)
-        Clock.schedule_once(async_load, 1.25)
+        Clock.schedule_once(async_load, 1.5)
 
 
 class ViewSetDetailsButton(Button):
