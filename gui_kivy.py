@@ -23,6 +23,8 @@ NODISPLAY_FIELDS = frozenset(["updated_at"])
 LIST_SCREEN_ID = "duplicate_set_list"
 SET_DETAILS_SCREEN_ID = "duplicate_set_details"
 PROGRESS_SCREEN_ID = "doing_stuff"
+EMPTY_SET_ID = "empty_set_screen"
+INITIAL_LOAD_SCREEN_ID = "initial_load_screen"
 
 
 class DedupeManager(ScreenManager):  # pylint: disable=too-few-public-methods
@@ -52,6 +54,19 @@ class EmptySetList(Screen):  # pylint: disable=too-few-public-methods
 
 class ProgressScreen(Screen):  # pylint: disable=too-few-public-methods
     """Transitional screen to give the impression of progress."""
+
+
+class InitialLoadScreen(Screen):  # pylint: disable=too-few-public-methods
+    """Transitional screen during initial data fetch."""
+
+    def on_enter(self):
+        def async_load(unused_dt):
+            duplicates = App.get_running_app().get_duplicates()
+            if duplicates:
+                navigate_to_screen(LIST_SCREEN_ID, direction='up', refresh=False)
+            else:
+                navigate_to_screen(EMPTY_SET_ID, direction='up', refresh=False)
+        Clock.schedule_once(async_load, 2)
 
 
 class ViewSetDetailsButton(Button):
@@ -303,12 +318,8 @@ class KivyGUI(App):
     def __init__(self, vault):
         super().__init__()
         self.op_api = op_api.OpApi(vault=vault)
-        self.infocus_duplicate_set = None
-        self.copy_vars = []
-        self.details_window = None
         self.manager = DedupeManager()
         self.title = "1Password Duplicate Manager"
-
 
     def get_duplicates(self):
         duplicates = self.op_api.find_duplicates()
@@ -316,15 +327,12 @@ class KivyGUI(App):
             return []
         return sorted(duplicates, key=lambda x: x.difference_score())
 
-
     def build(self):
         Builder.load_file('op_dedupe.kv')
-        duplicates = self.get_duplicates()
-        if not duplicates:
-            self.manager.add_widget(EmptySetList())
-            return self.manager
-
+        self.manager.switch_to(InitialLoadScreen(name=INITIAL_LOAD_SCREEN_ID))
+        self.manager.add_widget(ProgressScreen(name=PROGRESS_SCREEN_ID))
+        self.manager.add_widget(EmptySetList(name=EMPTY_SET_ID))
         self.manager.add_widget(DuplicateSetList(name=LIST_SCREEN_ID))
         self.manager.add_widget(DuplicateSetDetails(name=SET_DETAILS_SCREEN_ID))
-        self.manager.add_widget(ProgressScreen(name=PROGRESS_SCREEN_ID))
+        navigate_to_screen(INITIAL_LOAD_SCREEN_ID, direction='up', refresh=False)
         return self.manager
