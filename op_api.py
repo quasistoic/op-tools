@@ -267,7 +267,8 @@ class OpApi:
                     duplicate_ids.update(
                         [item.item_id for item in duplicate_set.items])
 
-        logging.info("Found %s sets of duplicates.", len(duplicates))
+        logging.info("Found %s sets of duplicates involving %s items.",
+            len(duplicates), len(duplicate_ids))
         return duplicates
 
 
