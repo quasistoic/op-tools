@@ -1,6 +1,38 @@
 # op-tools
  Tools for 1Password
 
+# Features
+
+This tool is designed to provide an optimized workflow for reducing the amount
+of redundant information in your 1Password vaults. It operates on two main principles:
+
+  1. Items that reference the same URL domain are most likely to be duplicates of each other.
+  2. The more similar two items are, the easier it is for you to know what to do with them.
+
+The first screen you'll encounter is a list of all of the "duplicate sets" that the tool
+has found in your vaults, grouped by domain, and ordered by "score", with the lowest-scored
+items at the top. When you click on one of these items, it'll open up the details
+page for that set.
+
+On the details page for a set, you will only be shown those fields where the items
+contain different information from each other. The goal is to reduce the amount
+of information shown in a set until you feel comfortable taking one of two actions
+that will remove the entire set from your list of duplicates:
+
+  1. Archive all but one of the items.
+  2. Decide that the items shown actually represent different accounts you would
+     like to keep, and tell the tool to ignore them in the future.
+
+The easiest items to make decisions on will have very little information shown,
+because the items are largely similar to each other. For example, if only the
+title is shown, that means all other information is identical, and you can archive
+whichever one you'd like without fear that you're going to lose any vital information.
+More commonly, the URLs may differ slightly, as one of them may go to a login
+page and the other may be a deeplink to a profile page. Either way, if all other
+fields are identical, it's easy to decide which to archive, as it likely doesn't
+much matter.
+
+
 # Installation
 
 You'll need to have the [1Password command line tool](https://1password.com/downloads/command-line/)
