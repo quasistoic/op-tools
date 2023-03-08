@@ -251,7 +251,7 @@ class OpApi:
             command += f' --title "{title}"'
         if url:
             command += f' --url "{url}"'
-        return self.run_command(command)
+        return self.run_command(command, cacheable=False, skip_cache=True)
 
     def add_tag(self, item_details, tag):
         item_id = item_details.item_id
