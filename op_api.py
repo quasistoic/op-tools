@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import pickle
+import shutil
 import sys
 
 from functools import cached_property
@@ -132,6 +133,12 @@ class OpApi:
 
     def _get_command_cache_file_name(self, command):
         return f"{self.cache_dir}/{self.vault}.{command}.cache"
+
+    def clear_entire_cache(self):
+        logging.info('Clearing cache...')
+        shutil.rmtree(self.cache_dir)
+        os.mkdir(self.cache_dir)
+        logging.info('Cache cleared.')
 
     def clear_details_cache(self, item_id):
         self.get_item_details(item_id, force_refresh=True)

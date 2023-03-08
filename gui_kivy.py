@@ -226,6 +226,14 @@ class RefreshSetButton(RefreshButton):  # pylint: disable=too-few-public-methods
         navigate_to_screen(SET_DETAILS_SCREEN_ID, direction='up', refresh=True)
 
 
+class EmptyCacheButton(IconButton):
+    """A button to clear the on-disk cache."""
+
+    def on_release(self):
+        # pylint: disable=no-self-use
+        App.get_running_app().op_api.clear_entire_cache()
+
+
 class OpenLinkButton(IconButton):
     """A button to open a link in a web browser."""
     selected_item = ObjectProperty(None)

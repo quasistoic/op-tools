@@ -45,6 +45,10 @@
     text: "Copy to others"
     icon_source: 'src/images/white-24dp/2x/twotone_content_copy_white_24dp.png'
 
+<EmptyCacheButton>:
+    text: "Empty cache"
+    icon_source: 'src/images/white-24dp/2x/twotone_folder_delete_white_24dp.png'
+
 <RefreshButton>:
     text: "Refresh"
     icon_source: 'src/images/white-24dp/2x/twotone_refresh_white_24dp.png'
@@ -77,10 +81,14 @@
             size_hint_y: sum(x.height for x in self.children)
             height: sum(x.height for x in self.children)
             GridLayout:
-                cols: 1
+                cols: 3
                 size_hint_y: None
-                height: sum(x.height for x in self.children)
+                height: self.children[0].height
                 halign: "right"
+                IconButton:
+                    disabled: True
+                    opacity: 0
+                EmptyCacheButton:
                 RefreshListButton:
             BoxLayout:
                 id: set_list_box
