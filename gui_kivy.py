@@ -66,7 +66,7 @@ class InitialLoadScreen(Screen):  # pylint: disable=too-few-public-methods
                 navigate_to_screen(LIST_SCREEN_ID, direction='up', refresh=False)
             else:
                 navigate_to_screen(EMPTY_SET_ID, direction='up', refresh=False)
-        Clock.schedule_once(async_load, 2)
+        Clock.schedule_once(async_load, 1.25)
 
 
 class ViewSetDetailsButton(Button):
@@ -329,7 +329,7 @@ class KivyGUI(App):
 
     def build(self):
         Builder.load_file('op_dedupe.kv')
-        self.manager.switch_to(InitialLoadScreen(name=INITIAL_LOAD_SCREEN_ID))
+        self.manager.add_widget(InitialLoadScreen(name=INITIAL_LOAD_SCREEN_ID))
         self.manager.add_widget(ProgressScreen(name=PROGRESS_SCREEN_ID))
         self.manager.add_widget(EmptySetList(name=EMPTY_SET_ID))
         self.manager.add_widget(DuplicateSetList(name=LIST_SCREEN_ID))
