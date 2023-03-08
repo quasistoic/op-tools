@@ -229,6 +229,17 @@ class OpApi:
         self.run_command(f"item delete {item_id} --archive", cacheable=False)
         self.refresh_item_ids()
 
+    def create_item(self, item_template_path, title='Created by op_dedupe',
+        url='https://example.com', generate_password=True):
+        command = f'item create --template="{item_template_path}"'
+        if generate_password:
+            command += ' --generate-password'
+        if title:
+            command += f' --title "{title}"'
+        if url:
+            command += f' --url "{url}"'
+        return self.run_command(command)
+
     def add_tag(self, item_details, tag):
         item_id = item_details.item_id
         all_tags = item_details.fields["tags"] + [tag]
