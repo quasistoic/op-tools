@@ -158,7 +158,16 @@ class ItemDetails:
 
 
 class OpApi:
-    """Connection Manager for the 1Password API."""
+    """Connection Manager for the 1Password API.
+
+    Notes on my experience with rate-limiting:
+        item get: Stick to under 300 qpm, and probably 15,000 qph, though I
+                  have not yet hit the per-hour limits.
+        item create: Stick to under 100 qpm and 250-300 (!) qph. Significantly
+                     less certain about these limits. I've hit them when trying
+                     to fill my account with duplicates for performance testing
+                     with large numbers of items.
+    """
 
     def __init__(self, cache_dir="./.op-cache", vault=None,
         call_interval_seconds=0.21):
