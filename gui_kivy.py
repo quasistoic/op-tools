@@ -33,6 +33,7 @@ def navigate_to_screen(screen_id, direction='right', refresh=False):
     """Refreshes data within a screen and navigates there."""
     screenmanager = App.get_running_app().manager
     screenmanager.transition.direction = direction
+    screenmanager.transition.duration = 0.2
 
     desired_screen = screenmanager.get_screen(screen_id)
     if refresh:
@@ -40,7 +41,7 @@ def navigate_to_screen(screen_id, direction='right', refresh=False):
         def refresh_and_navigate(unused_dt):
             desired_screen.refresh()
             screenmanager.current = screen_id
-        Clock.schedule_once(refresh_and_navigate, 0.5)
+        Clock.schedule_once(refresh_and_navigate, 0.25)
         return
     screenmanager.current = screen_id
 
@@ -62,6 +63,7 @@ class ViewSetDetailsButton(Button):
         details_screen = screenmanager.get_screen(SET_DETAILS_SCREEN_ID)
         details_screen.selected_set = self.selected_set
         screenmanager.transition.direction = 'left'
+        screenmanager.transition.duration = 0.2
         screenmanager.current = SET_DETAILS_SCREEN_ID
 
     def get_display_text(self):
@@ -188,7 +190,7 @@ class ArchiveButton(IconButton):  # pylint: disable=too-few-public-methods
         def archive_and_navigate(unused_dt):
             App.get_running_app().op_api.archive_item(self.selected_item.item_id)
             navigate_to_screen(LIST_SCREEN_ID, direction='right', refresh=True)
-        Clock.schedule_once(archive_and_navigate, 0.5)
+        Clock.schedule_once(archive_and_navigate, 0.25)
 
 
 class IgnoreSetButton(IconButton):  # pylint: disable=too-few-public-methods
@@ -200,7 +202,7 @@ class IgnoreSetButton(IconButton):  # pylint: disable=too-few-public-methods
         def ignore_and_navigate(unused_dt):
             App.get_running_app().op_api.mark_as_multiprofile(self.selected_set.items)
             navigate_to_screen(LIST_SCREEN_ID, direction='right', refresh=True)
-        Clock.schedule_once(ignore_and_navigate, 0.5)
+        Clock.schedule_once(ignore_and_navigate, 0.25)
 
 
 class RefreshButton(IconButton):  # pylint: disable=too-few-public-methods
@@ -258,7 +260,7 @@ class CopyButton(IconButton):
                     continue
                 app.op_api.copy_field_values(self.selected_item, target_item, [self.field_name])
             navigate_to_screen(SET_DETAILS_SCREEN_ID, direction='up', refresh=True)
-        Clock.schedule_once(copy_and_navigate, 0.5)
+        Clock.schedule_once(copy_and_navigate, 0.25)
 
 
 class HeaderRow(GridLayout):  # pylint: disable=too-few-public-methods
