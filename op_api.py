@@ -8,7 +8,7 @@ import shutil
 import sys
 
 from functools import cached_property
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 MULTIPROFILE_TAG = "ignored_by_op_dedupe"
 UNIMPLEMENTED_FIELDS = frozenset(["vault"])
@@ -35,8 +35,9 @@ def get_domains_from_urls(url_list):
 class ItemList:
     """A list of 1Password items."""
 
-    def __init__(self, item_details_list):
+    def __init__(self, item_details_list, op_api=None):
         self.items = item_details_list
+        self.op_api = op_api
 
     def __iter__(self):
         for i in self.items:
@@ -46,12 +47,12 @@ class ItemList:
         return self.items[i]
 
     @classmethod
-    def from_json(cls, serialized_json):
+    def from_json(cls, serialized_json, op_api=None):
         raw_items = json.loads(serialized_json)
         item_details_list = []
         for raw_item in raw_items:
-            item_details_list.append(ItemDetails.from_list(raw_item))
-        return cls(item_details_list)
+            item_details_list.append(ItemDetails.from_list(raw_item, op_api=op_api))
+        return cls(item_details_list, op_api=op_api)
 
 
 class ItemDetails:
@@ -62,12 +63,13 @@ class ItemDetails:
     JSON_LIST_SOURCE = "list_skeleton"
 
     def __init__(self, item_id, fields=(), source=None,
-            serialized=None, domains=frozenset([])):
+            serialized=None, domains=frozenset([]), op_api=None):
         self.item_id = item_id
         self.serialized = serialized
         self.source = source
         self.fields = fields
         self.domains = domains
+        self.op_api = op_api
 
     def __str__(self):
         return str(sorted(self.fields.items()))
@@ -84,8 +86,18 @@ class ItemDetails:
     def has_full_details(self):
         return ItemDetails.JSON_SOURCE == self.source
 
+    def get_app_deeplink(self):
+        # onepassword://open/i?a=ACCOUNT&v=VAULT&i=ITEM&h=HOST
+        parsed = urlparse(self.get_deeplink())
+        params = parse_qs(parsed.query)
+        return 'onepassword://open/i?a={account}&v={vault}&i={item}&h={host}'.format(
+            account=params['a'][0], host=params['h'][0], item=params['i'][0], vault=params['v'][0])
+
+    def get_deeplink(self):
+        return self.op_api.get_item_deeplink(self.item_id)
+
     @classmethod
-    def from_json(cls, serialized_json):
+    def from_json(cls, serialized_json, op_api=None):
         details = json.loads(serialized_json)
         item_id = details["id"]
         fields = {
@@ -103,10 +115,11 @@ class ItemDetails:
                 else:
                     fields[field["id"]] = field["value"]
         return cls(item_id, fields=fields, source=cls.JSON_SOURCE,
-            serialized=serialized_json, domains=get_domains_from_urls(fields["urls"]))
+            serialized=serialized_json, domains=get_domains_from_urls(fields["urls"]),
+            op_api=op_api)
 
     @classmethod
-    def from_list(cls, details):
+    def from_list(cls, details, op_api=None):
         item_id = details["id"]
         fields = {
             "title": details.get("title", "Untitled"),
@@ -117,7 +130,7 @@ class ItemDetails:
             "updated_at": details["updated_at"]
         }
         return cls(item_id, fields=fields, source=cls.JSON_LIST_SOURCE,
-            domains=get_domains_from_urls(fields["urls"]))
+            domains=get_domains_from_urls(fields["urls"]), op_api=op_api)
 
 
 class OpApi:
@@ -170,18 +183,21 @@ class OpApi:
     def get_item_list(self, force_refresh=False):
         output = self.run_command("item list --format=json",
             skip_cache=force_refresh)
-        item_list = ItemList.from_json(output)
+        item_list = ItemList.from_json(output, op_api=self)
         return item_list
 
     def get_item_details(self, item_id, force_refresh=False):
         output = self.run_command(f"item get {item_id} --format=json",
             skip_cache=force_refresh)
         try:
-            item = ItemDetails.from_json(output)
+            item = ItemDetails.from_json(output, op_api=self)
         except json.decoder.JSONDecodeError:
             logging.error("Error while attempting to read: %s", item_id)
             sys.exit(1)
         return item
+
+    def get_item_deeplink(self, item_id):
+        return self.run_command(f"item get {item_id} --share-link")
 
     def archive_item(self, item_id):
         logging.warning("Archiving item %s", item_id)

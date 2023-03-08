@@ -257,6 +257,18 @@ class OpenLinkButton(IconButton):
         # pylint: disable=no-self-use
         webbrowser.open_new_tab(self.selected_item.fields['urls'][0])
 
+
+class OpenInOpButton(IconButton):
+    """A button to open an item in the 1Password UI."""
+    selected_item = ObjectProperty(None)
+
+    def on_release(self):
+        # pylint: disable=no-self-use
+        deeplink = self.selected_item.get_app_deeplink()
+        logging.info("Deeplink: %s", deeplink)
+        webbrowser.open_new_tab(deeplink)
+
+
 class BackToListButton(IconButton):  # pylint: disable=too-few-public-methods
     """A button for navigating back to the list view."""
 

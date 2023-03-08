@@ -57,6 +57,10 @@
     text: "Open in browser"
     icon_source: 'src/images/white-24dp/2x/twotone_launch_white_24dp.png'
 
+<OpenInOpButton>:
+    text: "Open in 1Password"
+    icon_source: 'src/images/white-24dp/2x/twotone_launch_white_24dp.png'
+
 <Screen>:
     on_pre_leave: app.previous_screen = self.name
     color: periwinkle
@@ -135,7 +139,7 @@
 <DuplicateSetDetailsColumnHeader>:
     orientation: "vertical"
     size_hint_y: None
-    height: 160
+    height: 240
     Label:
         text: root.item_id
         size_hint_y: None
@@ -147,9 +151,12 @@
         icon_source: 'src/images/white-24dp/2x/twotone_archive_white_24dp.png'
     OpenLinkButton:
         selected_item: root.selected_item
+    OpenInOpButton:
+        selected_item: root.selected_item
 
 <HeaderRow>:
-    height: 240
+    height: 280
+    size_hint_y: None
     padding_x: 10
     padding_y: 40
 
