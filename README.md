@@ -32,6 +32,24 @@ page and the other may be a deeplink to a profile page. Either way, if all other
 fields are identical, it's easy to decide which to archive, as it likely doesn't
 much matter.
 
+When a duplicate set details page contains a lot of information, the easiest way
+to handle it is to use the "Copy to others" button to copy a particular field
+from one item to the same field on all the other items in the set. Working this way,
+you can reduce the amount of different information between items until you are
+left with a set of information you can more easily base decisions on.
+
+Ultimately, if the difference between two items comes down to just the password,
+you're going to have to actually try logging into the website to figure out which
+password (if any) is actually the correct one. While I hope to make that a little
+easier from within the tool directly (see FR #7), for now, you'll want to jump
+into the 1Password desktop app to make further progress on that item.
+
+Similarly, you will likely find some "duplicate sets" which are actually
+distinct accounts on the same service - perhaps you have two separate Google
+accounts, or your real IG page and a Finsta. In these cases, you'll want to take
+advantage of the "Ignore entire set" button. This will add an `ignored_by_op_dedupe`
+tag to each of the items in the set, and the tool will remove the set from the
+overall list view.
 
 # Installation
 
