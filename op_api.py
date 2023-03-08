@@ -1,17 +1,38 @@
 #!/usr/bin/env python3
 
+import collections
 import json
 import logging
 import os
 import pickle
 import shutil
 import sys
+import threading
+import time
 
 from functools import cached_property
 from urllib.parse import parse_qs, urlparse
 
 MULTIPROFILE_TAG = "ignored_by_op_dedupe"
 UNIMPLEMENTED_FIELDS = frozenset(["vault"])
+
+
+class RateLimiter(collections.Iterator):
+    """Iterator that yields a value at most once every 'interval' seconds."""
+    # Hat tip: https://stackoverflow.com/a/20644609/757873
+    def __init__(self, interval):
+        self.lock = threading.Lock()
+        self.interval = interval
+        self.next_yield = 0
+
+    def __next__(self):
+        with self.lock:
+            now = time.monotonic()
+            if now < self.next_yield:
+                time.sleep(self.next_yield - now)
+                now = time.monotonic()
+            self.next_yield = now + self.interval
+
 
 def get_domain_from_url(url):
     """Return the domain of a URL.
@@ -137,11 +158,13 @@ class ItemDetails:
 class OpApi:
     """Connection Manager for the 1Password API."""
 
-    def __init__(self, cache_dir="./.op-cache", vault=None):
+    def __init__(self, cache_dir="./.op-cache", vault=None,
+        call_interval_seconds=0.15):
         self.vault = vault
         self.cache_dir = cache_dir
         if not os.path.exists(self.cache_dir):
             os.mkdir(self.cache_dir)
+        self.api_rate_limiter = RateLimiter(call_interval_seconds)
         self.items = self.get_item_list()
         self.item_ids = [item.item_id for item in self.items]
 
@@ -171,6 +194,7 @@ class OpApi:
         if self.vault:
             op_command += f" --vault {self.vault}"
         logging.info("Calling API: %s", op_command)
+        next(self.api_rate_limiter)
         output = os.popen(op_command).read()
         if output and cacheable:
             with open(cache_file, "wb") as cache:
