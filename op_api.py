@@ -159,7 +159,7 @@ class OpApi:
     """Connection Manager for the 1Password API."""
 
     def __init__(self, cache_dir="./.op-cache", vault=None,
-        call_interval_seconds=0.15):
+        call_interval_seconds=0.21):
         self.vault = vault
         self.cache_dir = cache_dir
         if not os.path.exists(self.cache_dir):
