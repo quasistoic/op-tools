@@ -2,6 +2,7 @@
 
 
 import logging
+import webbrowser
 
 # pylint: disable=import-error
 from kivy.app import App
@@ -222,6 +223,14 @@ class RefreshSetButton(RefreshButton):  # pylint: disable=too-few-public-methods
         # pylint: disable=no-self-use
         navigate_to_screen(SET_DETAILS_SCREEN_ID, direction='up', refresh=True)
 
+
+class OpenLinkButton(IconButton):
+    """A button to open a link in a web browser."""
+    selected_item = ObjectProperty(None)
+
+    def on_release(self):
+        # pylint: disable=no-self-use
+        webbrowser.open_new_tab(self.selected_item.fields['urls'][0])
 
 class BackToListButton(IconButton):  # pylint: disable=too-few-public-methods
     """A button for navigating back to the list view."""
