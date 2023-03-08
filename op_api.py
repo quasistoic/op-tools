@@ -9,7 +9,7 @@ import sys
 from functools import cached_property
 from urllib.parse import urlparse
 
-MULTIPROFILE_TAG = "multiprofile"
+MULTIPROFILE_TAG = "ignored_by_op_dedupe"
 UNIMPLEMENTED_FIELDS = frozenset(["vault"])
 
 def get_domain_from_url(url):
