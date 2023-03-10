@@ -22,8 +22,6 @@ def init_argparse():
     return parser
 
 
-
-
 class StringStripper:
 
     def __init__(self, hex_string):
@@ -45,17 +43,22 @@ class StringStripper:
     def medium_num(self):
         return int(self.chars(2), 16)
 
-    def small_num_str(self):
-        return str(self.small_num())
-
-    def medium_num_str(self):
-        return str(self.medium_num())
-
     def fraction(self):
-        return self.small_num()/16
+        return (self.small_num()/16) + (1/16)
 
-    def fraction_str(self):
+    def opacity(self):
         return str(self.fraction())
+
+    def stroke_width(self):
+        return str((self.small_num() / 4) + 1)
+
+    def shape_width(self):
+        return str(self.medium_num() + 1)
+
+    def rotation_qty(self):
+        rotation_options = [3, 5, 6, 7, 9, 10, 11, 13]
+        rotation_options += list(map(lambda x: x * -1, rotation_options))
+        return rotation_options[self.small_num()]
 
 
 class SvgGenerator:
@@ -72,40 +75,40 @@ class SvgGenerator:
 
     def add_rectangle(self, root, stroke_opacity):
         return ET.SubElement(root, 'rect', attrib={
-            'stroke': self.stripper.color(), 'stroke-width': self.stripper.small_num_str(),
-            'x': self.stripper.small_num_str(), 'y': self.stripper.small_num_str(),
-            'width': self.stripper.medium_num_str(), 'height': self.stripper.medium_num_str(),
+            'stroke': self.stripper.color(), 'stroke-width': self.stripper.stroke_width(),
+            'x': self.stripper.shape_width(), 'y': self.stripper.shape_width(),
+            'width': self.stripper.shape_width(), 'height': self.stripper.shape_width(),
             'fill': 'none', 'stroke-opacity': stroke_opacity,
             'transform': ''
             })
 
     def add_moon(self, root, stroke_opacity):
-        x1 = self.stripper.medium_num()
-        x2 = self.stripper.medium_num()
-        y1 = self.stripper.medium_num()
-        y2 = self.stripper.medium_num()
-        rx = self.stripper.medium_num()
-        ry = self.stripper.medium_num()
+        x1 = self.stripper.shape_width()
+        x2 = self.stripper.shape_width()
+        y1 = self.stripper.shape_width()
+        y2 = self.stripper.shape_width()
+        rx = self.stripper.shape_width()
+        ry = self.stripper.shape_width()
         return ET.SubElement(root, 'path', attrib={
             'd': f'M{x1},{y1} A {rx},{ry} 0 0 0 {x2} {y2} A {rx},{ry} 0 1 1 {x1},{y1}',
-            'stroke': self.stripper.color(), 'stroke-width': self.stripper.small_num_str(),
+            'stroke': self.stripper.color(), 'stroke-width': self.stripper.stroke_width(),
             'fill': 'none',
             'stroke-opacity': stroke_opacity,
             'transform': ''
             })
 
     def add_curve(self, root, stroke_opacity):
-        x1 = self.stripper.medium_num()
-        x2 = self.stripper.medium_num()
-        y1 = self.stripper.medium_num()
-        y2 = self.stripper.medium_num()
-        x3 = self.stripper.medium_num()
-        x4 = self.stripper.medium_num()
-        y3 = self.stripper.medium_num()
-        y4 = self.stripper.medium_num()
+        x1 = self.stripper.shape_width()
+        x2 = self.stripper.shape_width()
+        y1 = self.stripper.shape_width()
+        y2 = self.stripper.shape_width()
+        x3 = self.stripper.shape_width()
+        x4 = self.stripper.shape_width()
+        y3 = self.stripper.shape_width()
+        y4 = self.stripper.shape_width()
         return ET.SubElement(root, 'path', attrib={
             'd': f'M{x1},{y1} Q {x2},{y2} {x3} {y3} T {x4} {y4}',
-            'stroke': self.stripper.color(), 'stroke-width': self.stripper.small_num_str(),
+            'stroke': self.stripper.color(), 'stroke-width': self.stripper.stroke_width(),
             'fill': 'none',
             'stroke-opacity': stroke_opacity,
             'transform': ''
@@ -122,19 +125,16 @@ class SvgGenerator:
     def build_svg(self):
         root = ET.Element('svg', attrib={'width': '256', 'height': '256', 'viewBox': "0 0 256 256",
             'version': '1.1', 'xmlns': 'http://www.w3.org/2000/svg'})
-        rotation_options = [3, 5, 6, 7, 9, 10, 11, 13]
-        rotation_options += list(map(lambda x: x * -1, rotation_options))
-        rotation_qty = rotation_options[self.stripper.small_num()]
         shapes = (
-            [self.stripper.fraction_str(), self.add_rectangle],
-            [self.stripper.fraction_str(), self.add_moon],
-            [self.stripper.fraction_str(), self.add_curve]
+            [self.stripper.opacity(), self.add_rectangle],
+            [self.stripper.opacity(), self.add_moon],
+            [self.stripper.opacity(), self.add_curve]
             )
         for stroke_opacity, add_shape in sorted(shapes,
                                                 reverse=True,
                                                 key=lambda x: (x[0], x[1].__name__)):
             shape = add_shape(root, stroke_opacity)
-            self.copy_and_rotate(root, shape, rotation_qty)
+            self.copy_and_rotate(root, shape, self.stripper.rotation_qty())
         return '<?xml version="1.0" standalone="no"?>{}'.format(
             ET.tostring(root, encoding='unicode'))
 
