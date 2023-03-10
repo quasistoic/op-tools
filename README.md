@@ -101,9 +101,13 @@ You can see the [full list of KIs here](https://github.com/quasistoic/op-tools/i
     This is a relative edge case, but be aware it exists. If this is blocking your workflow, let me
     know more about how and why in [this bug](https://github.com/quasistoic/op-tools/issues/6).
   * [Issue #5](https://github.com/quasistoic/op-tools/issues/5): A lot of your 1Password data ends
-    up in an on-disk cache when you use this tool. I'll be building functionality into the app
+    up in an on-disk cache when you use this tool. ~I'll be building functionality into the app
     itself to delete the cache, but in the meantime, you can delete it yourself by
-    running `rm ./.op-cache/*` from the same directory where you've been running the tool.
+    running `rm ./.op-cache/*` from the same directory where you've been running the tool.~
+    There is now a button at the top of the list screen you can press to clear the cache before
+    closing the app. If you're not planning on opening the app in a while, that's an easy way to
+    clear out the on-disk cache. I'm still working on rewriting the cache to store less data
+    going forward.
 
 # Why does this exist?
 
