@@ -113,7 +113,7 @@ class SvgGenerator:
 
     def copy_and_rotate(self, root, shape, rotation_qty):
         rotation_angle = 360/rotation_qty
-        for i in range(1, rotation_qty):
+        for i in range(1, abs(rotation_qty)):
             angle = rotation_angle * i
             attrib_copy = shape.attrib.copy()
             attrib_copy['transform'] = attrib_copy['transform'] + f' rotate({angle} 128 128)'
@@ -122,7 +122,9 @@ class SvgGenerator:
     def build_svg(self):
         root = ET.Element('svg', attrib={'width': '256', 'height': '256', 'viewBox': "0 0 256 256",
             'version': '1.1', 'xmlns': 'http://www.w3.org/2000/svg'})
-        rotation_qty = self.stripper.small_num() * 3 or 47
+        rotation_options = [3, 5, 6, 7, 9, 10, 11, 13]
+        rotation_options += list(map(lambda x: x * -1, rotation_options))
+        rotation_qty = rotation_options[self.stripper.small_num()]
         shapes = (
             [self.stripper.fraction_str(), self.add_rectangle],
             [self.stripper.fraction_str(), self.add_moon],
