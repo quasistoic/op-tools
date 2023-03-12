@@ -12,7 +12,7 @@ from xml.etree import ElementTree as ET
 
 def init_argparse():
     parser = argparse.ArgumentParser(
-        description='Find and manage duplicate items in 1Password.')
+        description='Create an SVG identicon from hashing strings.')
     parser.add_argument('--raw_string', type=str, default='Testing',
         help='The string to convert to an svg.')
     parser.add_argument('--salt', type=str, default='sajdfnaklgnfdsal;mkdfl;km',

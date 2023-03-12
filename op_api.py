@@ -53,6 +53,7 @@ def get_domain_from_url(url):
 def get_domains_from_urls(url_list):
     return {get_domain_from_url(url) for url in url_list if get_domain_from_url(url)}
 
+
 class ItemList:
     """A list of 1Password items."""
 
