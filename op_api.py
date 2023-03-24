@@ -19,6 +19,7 @@ UNIMPLEMENTED_FIELDS = frozenset(["vault"])
 
 class RateLimiter(collections.Iterator):
     """Iterator that yields a value at most once every 'interval' seconds."""
+
     # Hat tip: https://stackoverflow.com/a/20644609/757873
     def __init__(self, interval):
         self.lock = threading.Lock()
@@ -45,7 +46,7 @@ def get_domain_from_url(url):
     """
     parsed_url = urlparse(url)
     domain = parsed_url.netloc
-    if domain.startswith('www.'):
+    if domain.startswith("www."):
         domain = domain[4:]
     return domain
 
@@ -84,8 +85,16 @@ class ItemDetails:
     JSON_SOURCE = "json"
     JSON_LIST_SOURCE = "list_skeleton"
 
-    def __init__(self, item_id, fields=(), source=None,
-            serialized=None, domains=frozenset([]), op_api=None, vault_id=None):
+    def __init__(
+        self,
+        item_id,
+        fields=(),
+        source=None,
+        serialized=None,
+        domains=frozenset([]),
+        op_api=None,
+        vault_id=None,
+    ):
         self.item_id = item_id
         self.serialized = serialized
         self.source = source
@@ -104,7 +113,7 @@ class ItemDetails:
         return self.domains & other.domains
 
     def has_domains(self):
-        return self.domains and self.domains != frozenset([''])
+        return self.domains and self.domains != frozenset([""])
 
     def has_full_details(self):
         return ItemDetails.JSON_SOURCE == self.source
@@ -113,9 +122,9 @@ class ItemDetails:
         # onepassword://open/i?a=ACCOUNT&v=VAULT&i=ITEM&h=HOST
         parsed = urlparse(self.get_deeplink())
         params = parse_qs(parsed.query)
-        return 'onepassword://open/i?a={account}&v={vault}&i={item}&h={host}'.format(
-            account=params['a'][0], host=params['h'][0], item=params['i'][0],
-            vault=params['v'][0])
+        return "onepassword://open/i?a={a}&v={v}&i={i}&h={h}".format(
+            a=params["a"][0], h=params["h"][0], i=params["i"][0], v=params["v"][0]
+        )
 
     def get_deeplink(self):
         return self.op_api.get_item_deeplink(self.item_id)
@@ -130,7 +139,7 @@ class ItemDetails:
             "urls": [i["href"] for i in details.get("urls", [])],
             "vault": details["vault"]["name"],
             "category": details["category"],
-            "updated_at": details["updated_at"]
+            "updated_at": details["updated_at"],
         }
         for field in details["fields"]:
             if field.get("value"):
@@ -138,9 +147,15 @@ class ItemDetails:
                     fields[field["label"]] = field["value"]
                 else:
                     fields[field["id"]] = field["value"]
-        return cls(item_id, fields=fields, source=cls.JSON_SOURCE,
-            serialized=serialized_json, domains=get_domains_from_urls(fields["urls"]),
-            op_api=op_api, vault_id=details["vault"]["id"])
+        return cls(
+            item_id,
+            fields=fields,
+            source=cls.JSON_SOURCE,
+            serialized=serialized_json,
+            domains=get_domains_from_urls(fields["urls"]),
+            op_api=op_api,
+            vault_id=details["vault"]["id"],
+        )
 
     @classmethod
     def from_list(cls, details, op_api=None):
@@ -151,11 +166,16 @@ class ItemDetails:
             "urls": [i["href"] for i in details.get("urls", [])],
             "vault": details["vault"]["name"],
             "category": details["category"],
-            "updated_at": details["updated_at"]
+            "updated_at": details["updated_at"],
         }
-        return cls(item_id, fields=fields, source=cls.JSON_LIST_SOURCE,
-            domains=get_domains_from_urls(fields["urls"]), op_api=op_api,
-            vault_id=details["vault"]["id"])
+        return cls(
+            item_id,
+            fields=fields,
+            source=cls.JSON_LIST_SOURCE,
+            domains=get_domains_from_urls(fields["urls"]),
+            op_api=op_api,
+            vault_id=details["vault"]["id"],
+        )
 
 
 class OpApi:
@@ -170,8 +190,7 @@ class OpApi:
                      with large numbers of items.
     """
 
-    def __init__(self, cache_dir="./.op-cache", vault=None,
-        call_interval_seconds=0.21):
+    def __init__(self, cache_dir="./.op-cache", vault=None, call_interval_seconds=0.21):
         self.vault = vault
         self.cache_dir = cache_dir
         if not os.path.exists(self.cache_dir):
@@ -184,10 +203,10 @@ class OpApi:
         return f"{self.cache_dir}/{self.vault}.{command}.cache"
 
     def clear_entire_cache(self):
-        logging.info('Clearing cache...')
+        logging.info("Clearing cache...")
         shutil.rmtree(self.cache_dir)
         os.mkdir(self.cache_dir)
-        logging.info('Cache cleared.')
+        logging.info("Cache cleared.")
 
     def clear_details_cache(self, item_id):
         self.get_item_details(item_id, force_refresh=True)
@@ -220,14 +239,16 @@ class OpApi:
         self.item_ids = [item.item_id for item in self.items]
 
     def get_item_list(self, force_refresh=False):
-        output = self.run_command("item list --format=json",
-            skip_cache=force_refresh)
+        output = self.run_command("item list --format=json", skip_cache=force_refresh)
         item_list = ItemList.from_json(output, op_api=self)
         return item_list
 
     def get_item_details(self, item_id, force_refresh=False, vault_id=None):
-        output = self.run_command(f"item get {item_id} --format=json",
-            skip_cache=force_refresh, vault_id=vault_id)
+        output = self.run_command(
+            f"item get {item_id} --format=json",
+            skip_cache=force_refresh,
+            vault_id=vault_id,
+        )
         try:
             item = ItemDetails.from_json(output, op_api=self)
         except json.decoder.JSONDecodeError:
@@ -243,11 +264,16 @@ class OpApi:
         self.run_command(f"item delete {item_id} --archive", cacheable=False)
         self.refresh_item_ids()
 
-    def create_item(self, item_template_path, title='Created by op_dedupe',
-        url='https://example.com', generate_password=True):
+    def create_item(
+        self,
+        item_template_path,
+        title="Created by op_dedupe",
+        url="https://example.com",
+        generate_password=True,
+    ):
         command = f'item create --template="{item_template_path}"'
         if generate_password:
-            command += ' --generate-password'
+            command += " --generate-password"
         if title:
             command += f' --title "{title}"'
         if url:
@@ -274,10 +300,12 @@ class OpApi:
                     item_details = self.add_tag(item_details, value)
                 continue
             elif field_name in UNIMPLEMENTED_FIELDS:
-                logging.warning("Copying %s is currently unimplemented. Sorry.", field_name)
+                logging.warning(
+                    "Copying %s is currently unimplemented. Sorry.", field_name
+                )
                 continue
             elif values == "":
-                command = f'item edit {item_id} {field_name}[delete]'
+                command = f"item edit {item_id} {field_name}[delete]"
             else:
                 command = f'item edit {item_id} {field_name}="{values}"'
             self.run_command(command, cacheable=False)
@@ -291,7 +319,7 @@ class OpApi:
                 field_values[field_name] = from_item.fields[field_name]
             else:
                 # I guess we're erasing this field. TODO: Prompt to confirm.
-                field_values[field_name] = ''
+                field_values[field_name] = ""
         if field_values:
             self.update_item(to_item, field_values)
 
@@ -309,16 +337,17 @@ class OpApi:
         for i, details in enumerate(self.items):
             item_id = details.item_id
             if item_id in duplicate_ids:
-                logging.debug("Skipping %s because we know it's a duplicate.", item_id)
+                logging.debug("Skipping known duplicate %s.", item_id)
                 continue
             logging.debug("Looking for duplicates of %s", item_id)
             if details and details.has_domains():
                 matching_items = []
-                for j_details in self.items[i+1:]:
+                for j_details in self.items[i + 1 :]:
                     j_item_id = j_details.item_id
                     if j_item_id in duplicate_ids:
                         logging.debug(
-                            "Skipping %s (inner loop) because we know it's a duplicate.", j_item_id)
+                            "Skipping known duplicate %s (inner loop).", j_item_id
+                        )
                         continue
                     if j_details.item_id == details.item_id:
                         continue
@@ -326,20 +355,24 @@ class OpApi:
                         continue
                     matching_items.append(j_details)
                 if matching_items:
-                    duplicate_set = DuplicateSet([details] + matching_items, op_api=self)
+                    duplicate_set = DuplicateSet(
+                        [details] + matching_items, op_api=self
+                    )
                     if duplicate_set.is_intentionally_multiprofile():
                         continue
                     duplicates.append(duplicate_set)
-                    duplicate_ids.update(
-                        [item.item_id for item in duplicate_set.items])
+                    duplicate_ids.update([item.item_id for item in duplicate_set.items])
 
-        logging.info("Found %s sets of duplicates involving %s items.",
-            len(duplicates), len(duplicate_ids))
+        logging.info(
+            "Found %s sets of duplicates involving %s items.",
+            len(duplicates),
+            len(duplicate_ids),
+        )
         return duplicates
 
 
 class DuplicateSet:
-    """Container for a set of 1Password items that are considered duplicates of each other."""
+    """Container for a set of 1Password duplicate items."""
 
     def __init__(self, items, op_api=None):
         self.op_api = op_api
@@ -358,26 +391,28 @@ class DuplicateSet:
         for i, item in enumerate(self.items[:]):
             if item.has_full_details():
                 continue
-            new_item = self.op_api.get_item_details(item.item_id, vault_id=item.vault_id)
+            new_item = self.op_api.get_item_details(
+                item.item_id, vault_id=item.vault_id
+            )
             self.items[i] = new_item
 
     @cached_property
     def field_names(self):
         self.force_full_details()
-        return sorted(set(field_name for item in self.items
-                          for field_name in item.fields.keys()))
+        return sorted(
+            set(field_name for item in self.items for field_name in item.fields.keys())
+        )
 
     @cached_property
     def field_values(self):
         self.force_full_details()
         return [
-            [item.fields.get(field_name, '') for field_name in self.field_names]
+            [item.fields.get(field_name, "") for field_name in self.field_names]
             for item in self.items
         ]
 
     def is_intentionally_multiprofile(self):
-        return all(
-            MULTIPROFILE_TAG in item.fields["tags"] for item in self.items)
+        return all(MULTIPROFILE_TAG in item.fields["tags"] for item in self.items)
 
     def difference_score(self):
         score = 0
@@ -386,7 +421,9 @@ class DuplicateSet:
             for i in range(len(self.items)):
                 for k in range(len(self.field_values[i])):
                     item_value = self.field_values[i][k]
-                    if hasattr(item_value, '__iter__') and not isinstance(item_value, str):
+                    if hasattr(item_value, "__iter__") and not isinstance(
+                        item_value, str
+                    ):
                         for element in item_value:
                             existing_values.add(element)
                     else:
@@ -395,7 +432,7 @@ class DuplicateSet:
             row_has_diff_values = len(existing_values) > 1
             if row_has_diff_values:
                 field_score = len(existing_values)
-                if '' not in existing_values:
+                if "" not in existing_values:
                     field_score += 1
                 if field_name.lower() == "password":
                     field_score *= 10
